@@ -1,0 +1,164 @@
+{{define "content"}}
+<div class="mb-6">
+    <a href="/components" class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">&larr; Back to Components</a>
+</div>
+
+<h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+    {{if .IsNew}}New Component{{else}}Edit: {{if .Component.MPN}}{{deref .Component.MPN}}{{else}}Component{{end}}{{end}}
+</h1>
+
+<form {{if .IsNew}}action="/components" method="POST"{{else}}action="/components/{{.Component.ID}}" method="POST"{{end}}
+      class="space-y-6">
+    {{if not .IsNew}}
+    <input type="hidden" name="_method" value="PUT">
+    {{end}}
+
+    <!-- Category selector (only for new) -->
+    {{if .IsNew}}
+    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">Category</h2>
+        <select name="category_id" required
+                hx-get="/components/attr-fields" hx-target="#dynamic-attrs" hx-swap="innerHTML"
+                hx-include="this"
+                class="block w-full max-w-md rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
+            <option value="">Select a category...</option>
+            {{$catID := ""}}
+            {{if .Component}}{{$catID = .Component.CategoryID}}{{end}}
+            {{range .Categories}}
+            <option value="{{.ID}}" {{if eq $catID .ID}}selected{{end}}>
+                {{if .ParentName}}{{deref .ParentName}} &rarr; {{end}}{{.Name}}
+            </option>
+            {{end}}
+        </select>
+    </div>
+    {{else}}
+    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">Category</h2>
+        <p class="text-sm text-gray-700 dark:text-gray-300">{{.Component.CategoryName}}</p>
+    </div>
+    {{end}}
+
+    <!-- Core fields -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">Core Details</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">MPN (Part Number)</label>
+                <input type="text" name="mpn" value="{{if and .Component .Component.MPN}}{{deref .Component.MPN}}{{end}}"
+                       class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Manufacturer</label>
+                <input type="text" name="manufacturer" value="{{if and .Component .Component.Manufacturer}}{{deref .Component.Manufacturer}}{{end}}"
+                       class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
+            </div>
+            <div class="sm:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+                <input type="text" name="description" value="{{if and .Component .Component.Description}}{{deref .Component.Description}}{{end}}"
+                       class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Quantity</label>
+                <input type="number" name="quantity" value="{{if .Component}}{{.Component.Quantity}}{{else}}0{{end}}" min="0"
+                       class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Min Quantity (reorder threshold)</label>
+                <input type="number" name="min_quantity" value="{{if .Component}}{{.Component.MinQuantity}}{{else}}0{{end}}" min="0"
+                       class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Location</label>
+                <select name="location_id"
+                        class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
+                    <option value="">— unassigned —</option>
+                    {{$locID := ""}}{{if and .Component .Component.LocationID}}{{$locID = deref .Component.LocationID}}{{end}}
+                    {{range .Locations}}
+                    <option value="{{.ID}}" {{if eq $locID .ID}}selected{{end}}>
+                        {{if .ParentName}}{{deref .ParentName}} › {{end}}{{.Name}}
+                    </option>
+                    {{end}}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Datasheet URL</label>
+                <input type="url" name="datasheet_url" value="{{if and .Component .Component.DatasheetURL}}{{deref .Component.DatasheetURL}}{{end}}"
+                       class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
+            </div>
+            <div class="sm:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
+                <textarea name="notes" rows="3"
+                          class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">{{if and .Component .Component.Notes}}{{deref .Component.Notes}}{{end}}</textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dynamic attribute fields -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">Category Attributes</h2>
+        <div id="dynamic-attrs">
+            {{if .Fields}}
+            {{template "attr_fields_inner" .Fields}}
+            {{else}}
+            <p class="text-sm text-gray-500 dark:text-gray-400">Select a category to see its attributes.</p>
+            {{end}}
+        </div>
+    </div>
+
+    <div class="flex items-center gap-4">
+        <button type="submit" class="rounded-md bg-blue-600 px-6 py-2 text-sm font-medium text-white hover:bg-blue-700">
+            {{if .IsNew}}Create Component{{else}}Save Changes{{end}}
+        </button>
+        <a href="/components" class="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">Cancel</a>
+    </div>
+</form>
+{{end}}
+
+{{define "attr_fields_inner"}}
+{{if not .}}
+<p class="text-sm text-gray-500 dark:text-gray-400">No attributes defined for this category.</p>
+{{else}}
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    {{range .}}
+    <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {{.Attr.DisplayName}}
+            {{if .Attr.Unit}}<span class="text-gray-400 font-normal">({{deref .Attr.Unit}})</span>{{end}}
+            {{if .Attr.IsRequired}}<span class="text-red-500">*</span>{{end}}
+        </label>
+        {{if eq .Attr.DataType "numeric"}}
+        <input type="text" inputmode="decimal" name="attr_{{.Attr.ID}}"
+               value="{{if and .Value .Value.ValueNumeric}}{{formatSIInput .Value.ValueNumeric .Attr.Unit}}{{end}}"
+               placeholder="e.g. 4.7k, 100n, 1M"
+               {{if .Attr.IsRequired}}required{{end}}
+               class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
+        {{else if eq .Attr.DataType "text"}}
+        <input type="text" name="attr_{{.Attr.ID}}"
+               value="{{if and .Value .Value.ValueText}}{{deref .Value.ValueText}}{{end}}"
+               {{if .Attr.IsRequired}}required{{end}}
+               class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
+        {{else if eq .Attr.DataType "enum"}}
+        <select name="attr_{{.Attr.ID}}" {{if .Attr.IsRequired}}required{{end}}
+                class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
+            <option value="">— select —</option>
+            {{$selected := ""}}
+            {{if and .Value .Value.ValueEnum}}{{$selected = deref .Value.ValueEnum}}{{end}}
+            {{range .EnumValues}}
+            <option value="{{.ID}}" {{if eq $selected .ID}}selected{{end}}>{{.DisplayName}}</option>
+            {{end}}
+        </select>
+        {{else if eq .Attr.DataType "boolean"}}
+        <div class="pt-1">
+            <label class="inline-flex items-center gap-2">
+                <input type="checkbox" name="attr_{{.Attr.ID}}" value="on"
+                       {{if and .Value .Value.ValueBoolean}}{{if derefBool .Value.ValueBoolean}}checked{{end}}{{end}}
+                       class="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500">
+                <span class="text-sm text-gray-700 dark:text-gray-300">Yes</span>
+            </label>
+        </div>
+        {{end}}
+    </div>
+    {{end}}
+</div>
+{{end}}
+{{end}}

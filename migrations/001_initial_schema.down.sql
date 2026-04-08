@@ -1,0 +1,10 @@
+DROP TABLE IF EXISTS audit_log;
+DROP TABLE IF EXISTS storage_locations;
+DROP TABLE IF EXISTS component_attributes;
+DROP TABLE IF EXISTS components;
+DROP TABLE IF EXISTS attribute_definitions;
+DROP TABLE IF EXISTS categories;
+DROP TABLE IF EXISTS enum_values;
+DROP TABLE IF EXISTS enum_groups;
+DROP EXTENSION IF EXISTS "pg_trgm";
+DROP EXTENSION IF EXISTS "pgcrypto";

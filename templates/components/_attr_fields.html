@@ -1,0 +1,41 @@
+{{if not .}}
+<p class="text-sm text-gray-500 dark:text-gray-400">No attributes defined for this category.</p>
+{{else}}
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    {{range .}}
+    <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {{.Attr.DisplayName}}
+            {{if .Attr.Unit}}<span class="text-gray-400 font-normal">({{deref .Attr.Unit}})</span>{{end}}
+            {{if .Attr.IsRequired}}<span class="text-red-500">*</span>{{end}}
+        </label>
+        {{if eq .Attr.DataType "numeric"}}
+        <input type="text" inputmode="decimal" name="attr_{{.Attr.ID}}"
+               placeholder="e.g. 4.7k, 100n, 1M"
+               {{if .Attr.IsRequired}}required{{end}}
+               class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
+        {{else if eq .Attr.DataType "text"}}
+        <input type="text" name="attr_{{.Attr.ID}}"
+               {{if .Attr.IsRequired}}required{{end}}
+               class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
+        {{else if eq .Attr.DataType "enum"}}
+        <select name="attr_{{.Attr.ID}}" {{if .Attr.IsRequired}}required{{end}}
+                class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
+            <option value="">— select —</option>
+            {{range .EnumValues}}
+            <option value="{{.ID}}">{{.DisplayName}}</option>
+            {{end}}
+        </select>
+        {{else if eq .Attr.DataType "boolean"}}
+        <div class="pt-1">
+            <label class="inline-flex items-center gap-2">
+                <input type="checkbox" name="attr_{{.Attr.ID}}" value="on"
+                       class="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500">
+                <span class="text-sm text-gray-700 dark:text-gray-300">Yes</span>
+            </label>
+        </div>
+        {{end}}
+    </div>
+    {{end}}
+</div>
+{{end}}

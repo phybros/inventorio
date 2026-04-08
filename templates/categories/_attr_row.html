@@ -1,0 +1,14 @@
+<tr id="attr-{{.ID}}" class="hover:bg-gray-50 dark:hover:bg-gray-700/50 group">
+    <td class="px-3 py-2 text-sm"><code class="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-gray-700 dark:text-gray-300">{{.Name}}</code></td>
+    <td class="px-3 py-2 text-sm text-gray-900 dark:text-gray-100">{{.DisplayName}}</td>
+    <td class="px-3 py-2 text-sm text-gray-600 dark:text-gray-400">{{.DataType}}</td>
+    <td class="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">{{if .Unit}}{{deref .Unit}}{{else}}—{{end}}</td>
+    <td class="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">{{if .EnumGroupName}}{{deref .EnumGroupName}}{{else}}—{{end}}</td>
+    <td class="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">{{if .IsRequired}}Yes{{else}}—{{end}}</td>
+    <td class="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">{{.SortOrder}}</td>
+    <td class="px-3 py-2 text-sm text-right">
+        <button hx-delete="/admin/attributes/{{.ID}}" hx-target="#attr-{{.ID}}" hx-swap="outerHTML"
+                hx-confirm="Remove attribute '{{.DisplayName}}'?"
+                class="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity">remove</button>
+    </td>
+</tr>

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Label: {{.Name}}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white !important; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center p-8">
+
+    <div class="no-print mb-6 flex gap-3">
+        <button onclick="window.print()"
+                class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+            Print Label
+        </button>
+        <a href="/admin/locations"
+           class="rounded-md px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 border border-gray-300">
+            Back
+        </a>
+    </div>
+
+    <!-- Label card — sized for a standard address label (~3.5" × 1.5") -->
+    <div class="bg-white border-2 border-gray-300 rounded-lg p-4 flex items-center gap-4 shadow-sm"
+         style="width: 380px; min-height: 120px;">
+        <div id="qrcode" class="flex-shrink-0"></div>
+        <div class="flex-1 min-w-0">
+            {{if .ParentName}}
+            <p class="text-xs text-gray-400 truncate">{{deref .ParentName}}</p>
+            {{end}}
+            <p class="text-xl font-bold text-gray-900 leading-tight">{{.Name}}</p>
+            {{if .Description}}
+            <p class="text-xs text-gray-500 mt-1 truncate">{{deref .Description}}</p>
+            {{end}}
+            <p class="text-xs font-mono text-gray-400 mt-2">{{.Barcode}}</p>
+        </div>
+    </div>
+
+    <script>
+        new QRCode(document.getElementById("qrcode"), {
+            text: "{{.Barcode}}",
+            width: 88,
+            height: 88,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.M
+        });
+    </script>
+</body>
+</html>
