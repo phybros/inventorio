@@ -1,9 +1,9 @@
-<div id="qty-{{.ID}}" class="inline-flex items-center gap-1">
+<div id="qty-{{.ID}}" class="qty-stepper">
     <button hx-patch="/components/{{.ID}}/quantity" hx-vals='{"delta":"-1"}'
             hx-target="#qty-{{.ID}}" hx-swap="outerHTML"
-            class="w-6 h-6 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 text-xs font-bold">−</button>
-    <span class="w-8 text-center text-gray-900 dark:text-gray-100">{{.Quantity}}</span>
+            class="qty-btn">−</button>
+    <span class="qty-value">{{.Quantity}}</span>
     <button hx-patch="/components/{{.ID}}/quantity" hx-vals='{"delta":"1"}'
             hx-target="#qty-{{.ID}}" hx-swap="outerHTML"
-            class="w-6 h-6 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 text-xs font-bold">+</button>
+            class="qty-btn">+</button>
 </div>

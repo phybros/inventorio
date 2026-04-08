@@ -1,0 +1,167 @@
+{{$cats := .Categories}}
+{{$fmt := .Format}}
+
+<div class="space-y-4">
+
+{{if .ParseErrors}}
+<div class="alert alert-yellow">
+    <h3 class="alert-title">Parse warnings</h3>
+    <ul>
+    {{range .ParseErrors}}
+        <li>{{.}}</li>
+    {{end}}
+    </ul>
+</div>
+{{end}}
+
+{{if not .Rows}}
+<div class="alert alert-red">
+    No rows could be parsed from this file. Check the format selector and try again.
+</div>
+{{else}}
+
+<form method="POST" action="/import/commit">
+    <input type="hidden" name="count" value="{{len .Rows}}">
+
+    <div class="card card-body flex-row" style="flex-wrap:wrap;gap:1rem;align-items:center;margin-bottom:0">
+        <div class="flex-row gap-2">
+            <label class="form-label" style="white-space:nowrap;margin:0">Default category</label>
+            <span class="text-subtle">(used for new rows with no category)</span>
+        </div>
+        <select name="default_category_id"
+                data-combobox data-allow-create="true"
+                data-create-url="/api/categories/quick-create"
+                data-placeholder="Search or create category..."
+                class="input" style="max-width:16rem">
+            <option value="">— none —</option>
+            {{range $cats}}
+            <option value="{{.ID}}">
+                {{if .ParentName}}{{deref .ParentName}} / {{end}}{{.Name}}
+            </option>
+            {{end}}
+        </select>
+    </div>
+
+    <div class="table-wrap">
+        <div class="card-header flex-row-between">
+            <h2 class="section-title" style="margin:0;font-size:0.875rem">
+                {{len .Rows}} rows parsed
+                {{if eq $fmt "digikey"}}from DigiKey CSV{{else}}from Mouser XLS{{end}}
+            </h2>
+            <label class="check-label" style="font-size:0.75rem">
+                <input type="checkbox" id="select-all" checked onchange="toggleAll(this)" class="checkbox">
+                Select all
+            </label>
+        </div>
+
+        <div class="table-wrap-scroll">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th style="width:2rem"></th>
+                        <th style="width:5rem">Status</th>
+                        <th>MPN</th>
+                        <th>Manufacturer</th>
+                        <th>Description</th>
+                        <th style="width:7rem">Qty</th>
+                        <th>Category</th>
+                        <th>{{if eq $fmt "digikey"}}DigiKey #{{else}}Mouser #{{end}}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range $i, $row := .Rows}}
+                    <tr class="table-row-hover">
+                        <td>
+                            <input type="checkbox" name="include_{{$i}}" value="1" checked
+                                   class="row-check checkbox">
+                        </td>
+
+                        <input type="hidden" name="mpn_{{$i}}"         value="{{$row.MPN}}">
+                        <input type="hidden" name="mfr_{{$i}}"         value="{{$row.Manufacturer}}">
+                        <input type="hidden" name="desc_{{$i}}"        value="{{$row.Description}}">
+                        <input type="hidden" name="qty_{{$i}}"         value="{{$row.Quantity}}">
+                        <input type="hidden" name="existing_id_{{$i}}" value="{{$row.ExistingID}}">
+
+                        <td>
+                            {{if $row.IsMatch}}
+                            <span class="badge badge-blue" title="Will merge into existing component">Match</span>
+                            {{else}}
+                            <span class="badge badge-green">New</span>
+                            {{end}}
+                        </td>
+
+                        <td class="td-mono whitespace-nowrap">{{$row.MPN}}</td>
+
+                        <td class="whitespace-nowrap">
+                            {{if $row.Manufacturer}}
+                                {{$row.Manufacturer}}
+                            {{else if $row.ExistingMfr}}
+                                <span class="italic text-subtle">{{$row.ExistingMfr}}</span>
+                            {{end}}
+                        </td>
+
+                        <td class="truncate" style="max-width:16rem">
+                            {{if $row.Description}}
+                                <span title="{{$row.Description}}">{{$row.Description}}</span>
+                            {{else if $row.ExistingDesc}}
+                                <span class="italic text-subtle" title="{{$row.ExistingDesc}}">{{$row.ExistingDesc}}</span>
+                            {{end}}
+                        </td>
+
+                        <td class="tabular-nums whitespace-nowrap">
+                            {{if $row.IsMatch}}
+                                <span class="text-subtle">{{$row.ExistingQty}}</span>
+                                <span class="text-subtle">+</span>
+                                <span>{{$row.Quantity}}</span>
+                                <span class="text-subtle">=</span>
+                                <span class="font-medium">{{add $row.ExistingQty $row.Quantity}}</span>
+                            {{else}}
+                                {{$row.Quantity}}
+                            {{end}}
+                        </td>
+
+                        <td>
+                            {{if $row.IsMatch}}
+                                <span class="italic text-subtle">unchanged</span>
+                                <input type="hidden" name="cat_id_{{$i}}" value="">
+                            {{else}}
+                                <select name="cat_id_{{$i}}"
+                                        data-combobox data-allow-create="true"
+                                        data-create-url="/api/categories/quick-create"
+                                        data-placeholder="Search or create..."
+                                        class="input input-sm" style="max-width:11rem">
+                                    <option value="">— use default —</option>
+                                    {{range $cats}}
+                                    <option value="{{.ID}}" {{if eq $row.CategoryID .ID}}selected{{end}}>
+                                        {{if .ParentName}}{{deref .ParentName}} / {{end}}{{.Name}}
+                                    </option>
+                                    {{end}}
+                                </select>
+                                {{if and $row.CategoryHint (not $row.CategoryID)}}
+                                <span class="text-yellow" style="margin-left:0.25rem" title="No category matched {{$row.CategoryHint}}">?</span>
+                                {{end}}
+                            {{end}}
+                        </td>
+
+                        <td class="td-mono whitespace-nowrap">{{$row.SourceRef}}</td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="flex-row gap-3" style="margin-top:1rem">
+        <button type="submit" class="btn btn-success">Import selected components</button>
+        <span class="text-muted">Matched rows add to existing quantity. New rows use the category field above.</span>
+    </div>
+</form>
+
+<script>
+function toggleAll(cb) {
+    document.querySelectorAll('.row-check').forEach(el => el.checked = cb.checked);
+}
+</script>
+
+{{end}}
+</div>

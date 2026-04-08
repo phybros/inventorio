@@ -1,54 +1,49 @@
 {{define "content"}}
-<div class="flex items-center justify-between mb-6">
-    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Enum Groups</h1>
+<div class="page-header">
+    <h1 class="page-title">Enum Groups</h1>
 </div>
 
-<!-- New group form -->
 <form hx-post="/admin/enums" hx-target="#enum-groups" hx-swap="beforeend" hx-on::after-request="if(event.detail.successful) this.reset()"
-      class="mb-8 flex items-end gap-3 bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-    <div>
-        <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New Group</label>
+      class="card card-body mb-8 inline-form">
+    <div class="form-group">
+        <label for="name" class="form-label">New Group</label>
         <input type="text" name="name" id="name" required placeholder="e.g. connector_types"
-               class="block w-64 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
+               class="input" style="width:16rem">
     </div>
-    <button type="submit" class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
-        Create Group
-    </button>
+    <button type="submit" class="btn btn-primary" style="align-self:flex-end">Create Group</button>
 </form>
 
 <div id="enum-groups" class="space-y-6">
     {{range .}}
-    <div id="group-{{.ID}}" class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-5">
-        <div class="flex items-center justify-between mb-3">
-            <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200">{{.Name}}</h2>
+    <div id="group-{{.ID}}" class="card card-body">
+        <div class="flex-row-between mb-3">
+            <h2 class="section-title" style="margin:0">{{.Name}}</h2>
             <button hx-delete="/admin/enums/{{.ID}}" hx-target="#group-{{.ID}}" hx-swap="outerHTML"
                     hx-confirm="Delete group '{{.Name}}'? This cannot be undone."
-                    class="text-sm text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300">Delete Group</button>
+                    class="link-danger btn-sm">Delete Group</button>
         </div>
 
-        <ul id="values-{{.ID}}" class="mb-3 space-y-1">
+        <ul id="values-{{.ID}}" class="space-y-1 mb-3">
             {{range .Values}}
-            <li id="val-{{.ID}}" class="flex items-center justify-between py-1 px-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700/50 group">
+            <li id="val-{{.ID}}" class="enum-value-row row-group">
                 <span>
-                    <code class="text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">{{.Value}}</code>
-                    <span class="text-sm text-gray-500 dark:text-gray-400 ml-2">{{.DisplayName}}</span>
+                    <code class="code-tag">{{.Value}}</code>
+                    <span class="text-muted" style="margin-left:0.5rem">{{.DisplayName}}</span>
                 </span>
                 <button hx-delete="/admin/enums/values/{{.ID}}" hx-target="#val-{{.ID}}" hx-swap="outerHTML"
-                        class="text-xs text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity">remove</button>
+                        class="link-danger btn-xs row-group-action">remove</button>
             </li>
             {{end}}
         </ul>
 
         <form hx-post="/admin/enums/{{.ID}}/values" hx-target="#values-{{.ID}}" hx-swap="beforeend"
               hx-on::after-request="if(event.detail.successful) this.reset()"
-              class="flex items-end gap-2 pt-3 border-t border-gray-100 dark:border-gray-700">
+              class="flex-row gap-2" style="padding-top:0.75rem;border-top:1px solid var(--border-subtle)">
             <input type="text" name="value" required placeholder="value"
-                   class="block w-40 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm text-sm px-2 py-1.5 border">
+                   class="input input-sm" style="width:10rem">
             <input type="text" name="display_name" required placeholder="Display Name"
-                   class="block w-48 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm text-sm px-2 py-1.5 border">
-            <button type="submit" class="rounded-md bg-gray-100 dark:bg-gray-700 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600">
-                Add Value
-            </button>
+                   class="input input-sm" style="width:12rem">
+            <button type="submit" class="btn btn-secondary btn-sm">Add Value</button>
         </form>
     </div>
     {{end}}

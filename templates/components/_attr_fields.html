@@ -1,37 +1,39 @@
 {{if not .}}
-<p class="text-sm text-gray-500 dark:text-gray-400">No attributes defined for this category.</p>
+<p class="text-muted">No attributes defined for this category.</p>
 {{else}}
-<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+<div class="form-grid-2">
     {{range .}}
-    <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+    <div class="form-group">
+        <label class="form-label">
             {{.Attr.DisplayName}}
-            {{if .Attr.Unit}}<span class="text-gray-400 font-normal">({{deref .Attr.Unit}})</span>{{end}}
-            {{if .Attr.IsRequired}}<span class="text-red-500">*</span>{{end}}
+            {{if .Attr.Unit}}<span class="form-label-hint">({{deref .Attr.Unit}})</span>{{end}}
+            {{if .Attr.IsRequired}}<span class="form-required">*</span>{{end}}
         </label>
         {{if eq .Attr.DataType "numeric"}}
         <input type="text" inputmode="decimal" name="attr_{{.Attr.ID}}"
                placeholder="e.g. 4.7k, 100n, 1M"
                {{if .Attr.IsRequired}}required{{end}}
-               class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
+               class="input">
         {{else if eq .Attr.DataType "text"}}
         <input type="text" name="attr_{{.Attr.ID}}"
                {{if .Attr.IsRequired}}required{{end}}
-               class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
+               class="input">
         {{else if eq .Attr.DataType "enum"}}
         <select name="attr_{{.Attr.ID}}" {{if .Attr.IsRequired}}required{{end}}
-                class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm px-3 py-2 border">
+                data-combobox data-allow-create="true"
+                data-create-url="/api/enums/{{deref .Attr.EnumGroupID}}/values/quick-create"
+                data-placeholder="Search or create value..."
+                class="input">
             <option value="">— select —</option>
             {{range .EnumValues}}
             <option value="{{.ID}}">{{.DisplayName}}</option>
             {{end}}
         </select>
         {{else if eq .Attr.DataType "boolean"}}
-        <div class="pt-1">
-            <label class="inline-flex items-center gap-2">
-                <input type="checkbox" name="attr_{{.Attr.ID}}" value="on"
-                       class="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500">
-                <span class="text-sm text-gray-700 dark:text-gray-300">Yes</span>
+        <div style="padding-top:0.25rem">
+            <label class="check-label">
+                <input type="checkbox" name="attr_{{.Attr.ID}}" value="on" class="checkbox">
+                <span>Yes</span>
             </label>
         </div>
         {{end}}

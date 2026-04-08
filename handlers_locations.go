@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 )
 
 type locationListData struct {
@@ -88,6 +90,41 @@ func (app *App) HandleLocationDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
+}
+
+func (app *App) HandleLocationQuickCreate(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "invalid form", http.StatusBadRequest)
+		return
+	}
+	name := strings.TrimSpace(r.FormValue("name"))
+	if name == "" {
+		http.Error(w, "name is required", http.StatusBadRequest)
+		return
+	}
+
+	// Check for existing location with same name.
+	locs, err := listStorageLocations(app.db)
+	if err == nil {
+		for _, l := range locs {
+			if strings.EqualFold(l.Name, name) {
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(map[string]string{"id": l.ID, "name": l.Name})
+				return
+			}
+		}
+	}
+
+	loc, err := createStorageLocation(app.db, name, nil, nil)
+	if err != nil {
+		log.Printf("error quick-creating location: %v", err)
+		http.Error(w, "failed to create location", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]string{"id": loc.ID, "name": loc.Name})
 }
 
 func (app *App) HandleLocationLabel(w http.ResponseWriter, r *http.Request) {

@@ -1,46 +1,49 @@
 <tr>
-    <td class="px-3 py-2">
+    <td>
         <input type="text" name="name" required placeholder="resistance"
-               class="block w-full rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm px-2 py-1 border">
+               class="input input-sm">
     </td>
-    <td class="px-3 py-2">
+    <td>
         <input type="text" name="display_name" required placeholder="Resistance"
-               class="block w-full rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm px-2 py-1 border">
+               class="input input-sm">
     </td>
-    <td class="px-3 py-2">
-        <select name="data_type" required onchange="this.closest('tr').querySelector('.enum-select').style.display = this.value === 'enum' ? '' : 'none'"
-                class="block w-full rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm px-2 py-1 border">
+    <td>
+        <select name="data_type" required onchange="var es = this.closest('tr').querySelector('.enum-select'); if(es) es.style.display = this.value === 'enum' ? '' : 'none'"
+                class="input input-sm">
             <option value="numeric">numeric</option>
             <option value="text">text</option>
             <option value="enum">enum</option>
             <option value="boolean">boolean</option>
         </select>
     </td>
-    <td class="px-3 py-2">
+    <td>
         <input type="text" name="unit" placeholder="e.g. V, Ω"
-               class="block w-full rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm px-2 py-1 border">
+               class="input input-sm">
     </td>
-    <td class="px-3 py-2">
-        <select name="enum_group_id" class="enum-select block w-full rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm px-2 py-1 border" style="display:none">
+    <td>
+        <select name="enum_group_id" class="enum-select input input-sm"
+                data-combobox data-allow-create="true"
+                data-create-url="/api/enums/quick-create"
+                data-placeholder="Search or create group...">
             <option value="">(select group)</option>
             {{range .EnumGroups}}
             <option value="{{.ID}}">{{.Name}}</option>
             {{end}}
         </select>
     </td>
-    <td class="px-3 py-2">
-        <input type="checkbox" name="is_required" class="rounded border-gray-300 dark:border-gray-600">
+    <td>
+        <input type="checkbox" name="is_required" class="checkbox">
     </td>
-    <td class="px-3 py-2">
+    <td>
         <input type="number" name="sort_order" value="0"
-               class="block w-16 rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm px-2 py-1 border">
+               class="input input-sm" style="width:4rem">
     </td>
-    <td class="px-3 py-2 text-right space-x-1">
+    <td class="td-right">
         <button type="button"
                 hx-post="/admin/categories/{{.CategoryID}}/attributes"
                 hx-target="closest tr"
                 hx-swap="outerHTML"
                 hx-include="closest tr"
-                class="text-sm text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 font-medium">Save</button>
+                class="link text-green font-medium">Save</button>
     </td>
 </tr>

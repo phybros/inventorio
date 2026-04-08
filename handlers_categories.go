@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 type dashboardData struct {
@@ -171,6 +173,41 @@ func (app *App) HandleCategoryDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
+}
+
+func (app *App) HandleCategoryQuickCreate(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "invalid form", http.StatusBadRequest)
+		return
+	}
+	name := strings.TrimSpace(r.FormValue("name"))
+	if name == "" {
+		http.Error(w, "name is required", http.StatusBadRequest)
+		return
+	}
+
+	// Check for existing category with same name (case-insensitive).
+	cats, err := listAllCategories(app.db)
+	if err == nil {
+		for _, c := range cats {
+			if strings.EqualFold(c.Name, name) {
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(map[string]string{"id": c.ID, "name": c.Name})
+				return
+			}
+		}
+	}
+
+	id, err := createCategory(app.db, name, nil, nil)
+	if err != nil {
+		log.Printf("error quick-creating category: %v", err)
+		http.Error(w, "failed to create category", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]string{"id": id, "name": name})
 }
 
 // --- Attribute Definition Handlers ---

@@ -1,0 +1,39 @@
+{{define "content"}}
+<div class="space-y-6" style="max-width:32rem">
+    <h1 class="page-title">Import complete</h1>
+
+    <div class="card card-body space-y-3">
+        {{if gt .Imported 0}}
+        <div class="flex-row gap-3">
+            <span class="stat-value text-green" style="font-size:1.875rem">{{.Imported}}</span>
+            <span>new component{{if ne .Imported 1}}s{{end}} created</span>
+        </div>
+        {{end}}
+        {{if gt .Updated 0}}
+        <div class="flex-row gap-3">
+            <span class="stat-value text-blue" style="font-size:1.875rem">{{.Updated}}</span>
+            <span>existing component{{if ne .Updated 1}}s{{end}} updated</span>
+        </div>
+        {{end}}
+        {{if gt .Skipped 0}}
+        <div class="text-muted">{{.Skipped}} row{{if ne .Skipped 1}}s{{end}} skipped</div>
+        {{end}}
+    </div>
+
+    {{if .Errors}}
+    <div class="alert alert-red">
+        <h3 class="alert-title">Errors</h3>
+        <ul>
+        {{range .Errors}}
+            <li>{{.}}</li>
+        {{end}}
+        </ul>
+    </div>
+    {{end}}
+
+    <div class="flex-row gap-3">
+        <a href="/components" class="btn btn-primary">View components</a>
+        <a href="/import" class="btn btn-secondary">Import another file</a>
+    </div>
+</div>
+{{end}}

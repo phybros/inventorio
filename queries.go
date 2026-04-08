@@ -425,6 +425,45 @@ func getComponent(db *sql.DB, id string) (*Component, error) {
 	return &c, nil
 }
 
+// findComponentByMPN returns the first component matching the given MPN (case-insensitive),
+// or nil if none exists.
+func findComponentByMPN(db *sql.DB, mpn string) (*Component, error) {
+	var c Component
+	err := db.QueryRow(`
+		SELECT c.id, c.category_id, cat.name, c.mpn, c.manufacturer, c.description,
+		       c.quantity, c.min_quantity, c.location_id, sl.name,
+		       c.datasheet_url, c.notes, c.created_at, c.updated_at
+		FROM components c
+		JOIN categories cat ON c.category_id = cat.id
+		LEFT JOIN storage_locations sl ON c.location_id = sl.id
+		WHERE LOWER(c.mpn) = LOWER($1)
+		LIMIT 1
+	`, mpn).Scan(&c.ID, &c.CategoryID, &c.CategoryName, &c.MPN, &c.Manufacturer,
+		&c.Description, &c.Quantity, &c.MinQuantity, &c.LocationID, &c.LocationName,
+		&c.DatasheetURL, &c.Notes, &c.CreatedAt, &c.UpdatedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &c, nil
+}
+
+// importMergeComponent adds qty to the existing component and backfills any blank
+// text fields (manufacturer, description) with the provided values.
+func importMergeComponent(db *sql.DB, id string, addQty int, mfr, desc *string) error {
+	_, err := db.Exec(`
+		UPDATE components SET
+			quantity     = quantity + $2,
+			manufacturer = COALESCE(NULLIF(manufacturer, ''), $3, manufacturer),
+			description  = COALESCE(NULLIF(description,  ''), $4, description),
+			updated_at   = now()
+		WHERE id = $1
+	`, id, addQty, mfr, desc)
+	return err
+}
+
 func createComponent(db *sql.DB, c *Component) (string, error) {
 	var id string
 	err := db.QueryRow(`
@@ -437,11 +476,11 @@ func createComponent(db *sql.DB, c *Component) (string, error) {
 
 func updateComponent(db *sql.DB, c *Component) error {
 	_, err := db.Exec(`
-		UPDATE components SET mpn = $2, manufacturer = $3, description = $4,
-		       quantity = $5, min_quantity = $6, location_id = $7, datasheet_url = $8,
-		       notes = $9, updated_at = now()
+		UPDATE components SET category_id = $2, mpn = $3, manufacturer = $4, description = $5,
+		       quantity = $6, min_quantity = $7, location_id = $8, datasheet_url = $9,
+		       notes = $10, updated_at = now()
 		WHERE id = $1
-	`, c.ID, c.MPN, c.Manufacturer, c.Description,
+	`, c.ID, c.CategoryID, c.MPN, c.Manufacturer, c.Description,
 		c.Quantity, c.MinQuantity, c.LocationID, c.DatasheetURL, c.Notes)
 	return err
 }

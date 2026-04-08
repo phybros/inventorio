@@ -1,0 +1,47 @@
+{{define "content"}}
+<div class="space-y-6">
+    <div>
+        <h1 class="page-title">Import Components</h1>
+        <p class="text-muted" style="margin-top:0.25rem">
+            Upload a DigiKey cart export (CSV) or a Mouser order export (XLS) to import components in bulk.
+        </p>
+    </div>
+
+    <div class="card card-body" style="max-width:32rem">
+        <form id="upload-form"
+              hx-post="/import/preview"
+              hx-target="#preview-area"
+              hx-swap="innerHTML"
+              hx-encoding="multipart/form-data"
+              hx-indicator="#upload-spinner"
+              class="space-y-4">
+
+            <div class="form-group">
+                <label class="form-label">Supplier format</label>
+                <div class="flex-row gap-4" style="margin-top:0.25rem">
+                    <label class="check-label">
+                        <input type="radio" name="format" value="digikey" checked class="radio">
+                        <span>DigiKey (CSV)</span>
+                    </label>
+                    <label class="check-label">
+                        <input type="radio" name="format" value="mouser" class="radio">
+                        <span>Mouser (XLS)</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">File</label>
+                <input type="file" name="file" accept=".csv,.xls,.xlsx" required class="input-file">
+            </div>
+
+            <div class="flex-row gap-3">
+                <button type="submit" class="btn btn-primary">Preview import</button>
+                <span id="upload-spinner" class="htmx-indicator text-muted">Parsing file…</span>
+            </div>
+        </form>
+    </div>
+
+    <div id="preview-area"></div>
+</div>
+{{end}}

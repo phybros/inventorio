@@ -4,10 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inventorio</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = { darkMode: 'class' }
-    </script>
+    <link rel="stylesheet" href="/static/app.css">
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
     <script>
         // Default to dark; persist choice in localStorage
@@ -30,42 +27,271 @@
             }
         }
     </script>
-    <style>
-        [hx-swap-oob] { display: none; }
-    </style>
+    <script>
+    (function() {
+        function initCombobox(sel) {
+            if (sel._combobox) return;
+
+            var options = [];
+            for (var i = 0; i < sel.options.length; i++) {
+                var opt = sel.options[i];
+                if (opt.value === '') continue;
+                options.push({ value: opt.value, text: opt.textContent.trim(), el: opt });
+            }
+
+            var allowCreate = sel.dataset.allowCreate === 'true';
+            var createUrl = sel.dataset.createUrl || '';
+            var placeholder = sel.dataset.placeholder || sel.options[0]?.textContent.trim() || 'Search...';
+
+            // Wrapper div
+            var wrapper = document.createElement('div');
+            wrapper.className = 'combobox-wrapper';
+            // Carry over classes from select that aren't styling (e.g. enum-select for show/hide)
+            if (sel.classList.contains('enum-select')) {
+                wrapper.classList.add('enum-select');
+                wrapper.style.display = sel.style.display;
+            }
+            sel.parentNode.insertBefore(wrapper, sel);
+            wrapper.appendChild(sel);
+            sel.style.display = 'none';
+
+            // Hidden input for form value
+            var hidden = document.createElement('input');
+            hidden.type = 'hidden';
+            hidden.name = sel.name;
+            hidden.value = sel.value;
+            if (sel.required) hidden.required = true;
+            sel.name = '';
+
+            // Transfer data-htmx-* to hx-* on hidden input
+            var htmxAttrs = ['get','post','target','swap','include','trigger','vals'];
+            htmxAttrs.forEach(function(attr) {
+                var val = sel.dataset['htmx' + attr.charAt(0).toUpperCase() + attr.slice(1)];
+                if (val) {
+                    hidden.setAttribute('hx-' + attr, val);
+                }
+            });
+            if (sel.dataset.htmxGet || sel.dataset.htmxPost) {
+                if (!hidden.getAttribute('hx-trigger')) hidden.setAttribute('hx-trigger', 'change');
+                if (!hidden.getAttribute('hx-include')) hidden.setAttribute('hx-include', 'this');
+            }
+            wrapper.appendChild(hidden);
+            if (typeof htmx !== 'undefined') htmx.process(hidden);
+
+            // Text input
+            var input = document.createElement('input');
+            input.type = 'text';
+            input.placeholder = placeholder;
+            input.autocomplete = 'off';
+            input.className = sel.className.split(' ').filter(function(c) { return c !== 'enum-select'; }).join(' ');
+            input.style.display = '';
+            wrapper.appendChild(input);
+
+            // Set initial display text
+            var selOpt = sel.options[sel.selectedIndex];
+            if (selOpt && selOpt.value) {
+                input.value = selOpt.textContent.trim();
+            }
+
+            // Dropdown panel
+            var panel = document.createElement('div');
+            panel.className = 'combobox-panel';
+            panel.style.display = 'none';
+            wrapper.appendChild(panel);
+
+            var activeIdx = -1;
+            var filtered = [];
+            var creating = false;
+
+            function render(query) {
+                query = (query || '').toLowerCase();
+                filtered = [];
+                var exactMatch = false;
+                options.forEach(function(opt) {
+                    if (!query || opt.text.toLowerCase().indexOf(query) !== -1) {
+                        filtered.push(opt);
+                        if (opt.text.toLowerCase() === query) exactMatch = true;
+                    }
+                });
+
+                panel.innerHTML = '';
+                if (filtered.length === 0 && !allowCreate) {
+                    var empty = document.createElement('div');
+                    empty.className = 'combobox-empty';
+                    empty.textContent = 'No matches';
+                    panel.appendChild(empty);
+                } else {
+                    filtered.forEach(function(opt, idx) {
+                        var div = document.createElement('div');
+                        div.className = 'combobox-item';
+                        div.textContent = opt.text;
+                        div.dataset.idx = idx;
+                        div.addEventListener('mousedown', function(e) {
+                            e.preventDefault();
+                            selectOption(opt.value, opt.text);
+                        });
+                        panel.appendChild(div);
+                    });
+                }
+
+                if (allowCreate && createUrl && query && !exactMatch) {
+                    var createDiv = document.createElement('div');
+                    createDiv.className = 'combobox-item combobox-create';
+                    createDiv.textContent = 'Create \u201c' + input.value.trim() + '\u201d\u2026';
+                    createDiv.dataset.idx = filtered.length;
+                    createDiv.addEventListener('mousedown', function(e) {
+                        e.preventDefault();
+                        doCreate(input.value.trim());
+                    });
+                    panel.appendChild(createDiv);
+                }
+
+                activeIdx = -1;
+                panel.style.display = '';
+            }
+
+            function selectOption(value, text) {
+                hidden.value = value;
+                input.value = text;
+                panel.style.display = 'none';
+                hidden.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+
+            function doCreate(name) {
+                if (creating || !name) return;
+                creating = true;
+                fetch(createUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'name=' + encodeURIComponent(name)
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    options.push({ value: data.id, text: data.name });
+                    var opt = document.createElement('option');
+                    opt.value = data.id;
+                    opt.textContent = data.name;
+                    sel.appendChild(opt);
+                    selectOption(data.id, data.name);
+                })
+                .catch(function(err) { console.error('quick-create failed:', err); })
+                .finally(function() { creating = false; });
+            }
+
+            function highlightItem(idx) {
+                var items = panel.querySelectorAll('.combobox-item');
+                items.forEach(function(el) { el.classList.remove('active'); });
+                var total = items.length;
+                if (total === 0) return;
+                if (idx < 0) idx = total - 1;
+                if (idx >= total) idx = 0;
+                activeIdx = idx;
+                items[activeIdx].classList.add('active');
+                items[activeIdx].scrollIntoView({ block: 'nearest' });
+            }
+
+            input.addEventListener('focus', function() {
+                render(input.value);
+            });
+
+            input.addEventListener('input', function() {
+                render(input.value);
+            });
+
+            input.addEventListener('blur', function() {
+                setTimeout(function() { panel.style.display = 'none'; }, 150);
+            });
+
+            input.addEventListener('keydown', function(e) {
+                var items = panel.querySelectorAll('.combobox-item');
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    highlightItem(activeIdx + 1);
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    highlightItem(activeIdx - 1);
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (activeIdx >= 0 && activeIdx < items.length) {
+                        items[activeIdx].dispatchEvent(new Event('mousedown'));
+                    }
+                } else if (e.key === 'Escape') {
+                    panel.style.display = 'none';
+                    input.blur();
+                }
+            });
+
+            // Clear value when text is emptied
+            input.addEventListener('change', function() {
+                if (!input.value.trim()) {
+                    hidden.value = '';
+                    hidden.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            });
+
+            // Public API
+            sel._combobox = {
+                setValue: function(id) {
+                    if (!id) {
+                        hidden.value = '';
+                        input.value = '';
+                        return;
+                    }
+                    for (var i = 0; i < options.length; i++) {
+                        if (options[i].value === id) {
+                            hidden.value = id;
+                            input.value = options[i].text;
+                            return;
+                        }
+                    }
+                    hidden.value = id;
+                    input.value = id;
+                }
+            };
+        }
+
+        function initAllComboboxes(root) {
+            (root || document).querySelectorAll('select[data-combobox]').forEach(function(sel) {
+                initCombobox(sel);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() { initAllComboboxes(); });
+        document.body.addEventListener('htmx:afterSettle', function(e) { initAllComboboxes(e.detail.elt); });
+
+        window.initCombobox = initCombobox;
+        window.initAllComboboxes = initAllComboboxes;
+    })();
+    </script>
 </head>
-<body class="bg-gray-50 dark:bg-gray-900 min-h-screen text-gray-900 dark:text-gray-100 transition-colors">
-    <nav class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-14">
-                <div class="flex items-center space-x-8">
-                    <a href="/" class="text-lg font-semibold text-gray-900 dark:text-white">Inventorio</a>
-                    <a href="/components" class="text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">Components</a>
-                    <a href="/admin/categories" class="text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">Categories</a>
-                    <a href="/admin/enums" class="text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">Enum Groups</a>
-                    <a href="/admin/locations" class="text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">Locations</a>
-                    <a href="/admin/audit" class="text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">Audit Log</a>
+<body>
+    <nav class="nav">
+        <div class="page-container">
+            <div class="nav-inner">
+                <div class="nav-links">
+                    <a href="/" class="nav-brand">Inventorio</a>
+                    <a href="/components" class="nav-link">Components</a>
+                    <a href="/admin/categories" class="nav-link">Categories</a>
+                    <a href="/admin/enums" class="nav-link">Enum Groups</a>
+                    <a href="/admin/locations" class="nav-link">Locations</a>
+                    <a href="/admin/audit" class="nav-link">Audit Log</a>
+                    <a href="/import" class="nav-link">Import</a>
                 </div>
-                <div class="flex items-center gap-3">
-                    <form method="GET" action="/components" class="flex items-center">
-                        <div class="relative">
-                            <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="nav-actions">
+                    <form method="GET" action="/components">
+                        <div class="nav-search-wrap">
+                            <svg class="nav-search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                             </svg>
-                            <input type="text" name="q" placeholder="Search parts…"
-                                   class="pl-8 pr-3 py-1.5 text-sm rounded-md border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 w-48">
+                            <input type="text" name="q" placeholder="Search parts…" class="nav-search">
                         </div>
                     </form>
-                    <button onclick="toggleTheme()"
-                            class="p-2 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-                            title="Toggle dark mode">
-                        <!-- Sun icon (visible in dark mode) -->
-                        <svg class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <button onclick="toggleTheme()" class="btn-icon" title="Toggle dark mode">
+                        <svg class="icon-sun" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                   d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
                         </svg>
-                        <!-- Moon icon (visible in light mode) -->
-                        <svg class="w-5 h-5 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="icon-moon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                   d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
                         </svg>
@@ -74,7 +300,7 @@
             </div>
         </div>
     </nav>
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <main class="page-container page-main">
         {{block "content" .}}{{end}}
     </main>
 </body>

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"embed"
 	"fmt"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -16,6 +17,9 @@ import (
 
 //go:embed migrations/*.sql
 var migrationFS embed.FS
+
+//go:embed static
+var staticFS embed.FS
 
 type App struct {
 	db       *sql.DB
@@ -54,6 +58,13 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
+
+	// Static files
+	staticSub, err := fs.Sub(staticFS, "static")
+	if err != nil {
+		log.Fatalf("failed to create static sub-FS: %v", err)
+	}
+	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticSub))))
 
 	// Dashboard
 	mux.HandleFunc("GET /{$}", app.HandleIndex)
@@ -98,6 +109,17 @@ func main() {
 
 	// Audit log
 	mux.HandleFunc("GET /admin/audit", app.HandleAuditLog)
+
+	// Quick-create API (JSON, used by combobox)
+	mux.HandleFunc("POST /api/categories/quick-create", app.HandleCategoryQuickCreate)
+	mux.HandleFunc("POST /api/locations/quick-create", app.HandleLocationQuickCreate)
+	mux.HandleFunc("POST /api/enums/quick-create", app.HandleEnumGroupQuickCreate)
+	mux.HandleFunc("POST /api/enums/{id}/values/quick-create", app.HandleEnumValueQuickCreate)
+
+	// Import
+	mux.HandleFunc("GET /import", app.HandleImportPage)
+	mux.HandleFunc("POST /import/preview", app.HandleImportPreview)
+	mux.HandleFunc("POST /import/commit", app.HandleImportCommit)
 
 	handler := methodOverride(mux)
 

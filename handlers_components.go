@@ -338,9 +338,14 @@ func (app *App) HandleComponentUpdate(w http.ResponseWriter, r *http.Request) {
 	qty, _ := strconv.Atoi(r.FormValue("quantity"))
 	minQty, _ := strconv.Atoi(r.FormValue("min_quantity"))
 
+	categoryID := r.FormValue("category_id")
+	if categoryID == "" {
+		categoryID = existing.CategoryID
+	}
+
 	comp := &Component{
 		ID:          id,
-		CategoryID:  existing.CategoryID,
+		CategoryID:  categoryID,
 		Quantity:    qty,
 		MinQuantity: minQty,
 	}
@@ -369,7 +374,7 @@ func (app *App) HandleComponentUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	attrs, err := app.parseAttrValues(r, existing.CategoryID)
+	attrs, err := app.parseAttrValues(r, categoryID)
 	if err != nil {
 		log.Printf("error parsing attributes: %v", err)
 		http.Error(w, "failed to parse attributes", http.StatusInternalServerError)

@@ -4,6 +4,9 @@ inventorio
 
 # Data
 .pgdata/
+*.xls
+*.xlsx
+*.csv
 
 # Environment
 .env
