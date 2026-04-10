@@ -62,6 +62,7 @@
             hidden.value = sel.value;
             if (sel.required) hidden.required = true;
             sel.name = '';
+            sel.required = false;
 
             // Transfer data-htmx-* to hx-* on hidden input
             var htmxAttrs = ['get','post','target','swap','include','trigger','vals'];
@@ -256,8 +257,10 @@
             });
         }
 
-        document.addEventListener('DOMContentLoaded', function() { initAllComboboxes(); });
-        document.body.addEventListener('htmx:afterSettle', function(e) { initAllComboboxes(e.detail.elt); });
+        document.addEventListener('DOMContentLoaded', function() {
+            initAllComboboxes();
+            document.addEventListener('htmx:afterSettle', function(e) { initAllComboboxes(e.detail.elt); });
+        });
 
         window.initCombobox = initCombobox;
         window.initAllComboboxes = initAllComboboxes;

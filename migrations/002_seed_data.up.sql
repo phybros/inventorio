@@ -92,14 +92,9 @@ INSERT INTO enum_values (enum_group_id, value, display_name, sort_order) VALUES
     ('a0000000-0000-0000-0000-000000000002', 'HC',        'HC',        0),
     ('a0000000-0000-0000-0000-000000000002', 'HCT',       'HCT',       1),
     ('a0000000-0000-0000-0000-000000000002', 'LS',        'LS',        2),
-    ('a0000000-0000-0000-0000-000000000002', 'ALS',       'ALS',       3),
-    ('a0000000-0000-0000-0000-000000000002', 'AC',        'AC',        4),
-    ('a0000000-0000-0000-0000-000000000002', 'ACT',       'ACT',       5),
-    ('a0000000-0000-0000-0000-000000000002', 'LVC',       'LVC',       6),
-    ('a0000000-0000-0000-0000-000000000002', 'LV',        'LV',        7),
-    ('a0000000-0000-0000-0000-000000000002', 'F',         'F',         8),
-    ('a0000000-0000-0000-0000-000000000002', 'S',         'S',         9),
-    ('a0000000-0000-0000-0000-000000000002', 'CMOS_4000', 'CMOS 4000', 10);
+    ('a0000000-0000-0000-0000-000000000002', 'AC',        'AC',        3),
+    ('a0000000-0000-0000-0000-000000000002', 'ACT',       'ACT',       4),
+    ('a0000000-0000-0000-0000-000000000002', '4000',      '4000',      5);
 
 -- tolerance_bands
 INSERT INTO enum_values (enum_group_id, value, display_name, sort_order) VALUES
@@ -111,7 +106,7 @@ INSERT INTO enum_values (enum_group_id, value, display_name, sort_order) VALUES
 
 -- capacitor_types
 INSERT INTO enum_values (enum_group_id, value, display_name, sort_order) VALUES
-    ('a0000000-0000-0000-0000-000000000004', 'ceramic',      'Ceramic (MLCC)', 0),
+    ('a0000000-0000-0000-0000-000000000004', 'ceramic',      'Ceramic', 0),
     ('a0000000-0000-0000-0000-000000000004', 'electrolytic', 'Electrolytic',   1),
     ('a0000000-0000-0000-0000-000000000004', 'tantalum',     'Tantalum',       2),
     ('a0000000-0000-0000-0000-000000000004', 'film',         'Film',           3),
@@ -132,7 +127,7 @@ INSERT INTO enum_values (enum_group_id, value, display_name, sort_order) VALUES
     ('a0000000-0000-0000-0000-000000000006', 'OR',     'OR',     2),
     ('a0000000-0000-0000-0000-000000000006', 'NOR',    'NOR',    3),
     ('a0000000-0000-0000-0000-000000000006', 'XOR',    'XOR',    4),
-    ('a0000000-0000-0000-0000-000000000006', 'XNOR',   'XNOR',  5),
+    ('a0000000-0000-0000-0000-000000000006', 'XNOR',   'XNOR',   5),
     ('a0000000-0000-0000-0000-000000000006', 'NOT',    'NOT',    6),
     ('a0000000-0000-0000-0000-000000000006', 'Buffer', 'Buffer', 7);
 
@@ -147,8 +142,7 @@ INSERT INTO enum_values (enum_group_id, value, display_name, sort_order) VALUES
 INSERT INTO enum_values (enum_group_id, value, display_name, sort_order) VALUES
     ('a0000000-0000-0000-0000-000000000008', 'D',  'D',  0),
     ('a0000000-0000-0000-0000-000000000008', 'JK', 'JK', 1),
-    ('a0000000-0000-0000-0000-000000000008', 'SR', 'SR', 2),
-    ('a0000000-0000-0000-0000-000000000008', 'T',  'T',  3);
+    ('a0000000-0000-0000-0000-000000000008', 'SR', 'SR', 2);
 
 -- edge_types
 INSERT INTO enum_values (enum_group_id, value, display_name, sort_order) VALUES
@@ -214,6 +208,7 @@ INSERT INTO categories (id, name, description) VALUES
     ('b0000000-0000-0000-0000-000000000002', 'Capacitors',             'All capacitor types'),
     ('b0000000-0000-0000-0000-000000000003', 'Inductors',              'Inductors and chokes'),
     ('b0000000-0000-0000-0000-000000000004', 'Diodes',                 'Rectifiers, Schottky, Zener, LEDs'),
+    ('b0000000-0000-0000-0000-000000000010', 'Optoelectronics',        'LEDs, displays, optocouplers'),
     ('b0000000-0000-0000-0000-000000000005', 'Logic ICs',              'Digital logic integrated circuits'),
     ('b0000000-0000-0000-0000-00000000000b', 'Connectors',             'Headers, sockets, and connectors'),
     ('b0000000-0000-0000-0000-00000000000c', 'Transistors',            'BJTs, MOSFETs, JFETs'),
@@ -228,6 +223,12 @@ INSERT INTO categories (id, name, parent_id, description) VALUES
     ('b0000000-0000-0000-0000-000000000008', 'Shift Registers',    'b0000000-0000-0000-0000-000000000005', 'Serial/parallel shift registers'),
     ('b0000000-0000-0000-0000-000000000009', 'Buffers & Drivers',  'b0000000-0000-0000-0000-000000000005', 'Buffer and driver ICs'),
     ('b0000000-0000-0000-0000-00000000000a', 'Counters',           'b0000000-0000-0000-0000-000000000005', 'Binary, decade, up/down counters');
+
+-- Optoelectronic sub categories
+INSERT INTO categories (id, name, parent_id, description) VALUES
+    ('b0000000-0000-0000-0000-000000000011', 'LEDs',           'b0000000-0000-0000-0000-000000000010', 'Single LEDs'),
+    ('b0000000-0000-0000-0000-000000000012', 'Displays',       'b0000000-0000-0000-0000-000000000010', '7-Segment, Bar Graphs'),
+    ('b0000000-0000-0000-0000-000000000013', 'Optocouplers',   'b0000000-0000-0000-0000-000000000010', 'a.k.a. Photocouplers, Optoisolators, Optical Isolators');
 
 -- ============================================================
 -- ATTRIBUTE DEFINITIONS

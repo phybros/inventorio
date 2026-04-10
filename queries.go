@@ -8,6 +8,14 @@ import (
 	"strings"
 )
 
+// sqlExecer is satisfied by both *sql.DB and *sql.Tx, allowing query
+// functions to run inside or outside a transaction with the same signature.
+type sqlExecer interface {
+	Exec(query string, args ...any) (sql.Result, error)
+	Query(query string, args ...any) (*sql.Rows, error)
+	QueryRow(query string, args ...any) *sql.Row
+}
+
 var searchNormalizer = strings.NewReplacer("-", " ", "_", " ")
 
 // normalizeQuery replaces punctuation that users and datasheets treat
@@ -464,7 +472,7 @@ func importMergeComponent(db *sql.DB, id string, addQty int, mfr, desc *string) 
 	return err
 }
 
-func createComponent(db *sql.DB, c *Component) (string, error) {
+func createComponent(db sqlExecer, c *Component) (string, error) {
 	var id string
 	err := db.QueryRow(`
 		INSERT INTO components (category_id, mpn, manufacturer, description, quantity, min_quantity, location_id, datasheet_url, notes)
@@ -474,7 +482,7 @@ func createComponent(db *sql.DB, c *Component) (string, error) {
 	return id, err
 }
 
-func updateComponent(db *sql.DB, c *Component) error {
+func updateComponent(db sqlExecer, c *Component) error {
 	_, err := db.Exec(`
 		UPDATE components SET category_id = $2, mpn = $3, manufacturer = $4, description = $5,
 		       quantity = $6, min_quantity = $7, location_id = $8, datasheet_url = $9,
@@ -532,7 +540,7 @@ func getComponentAttributes(db *sql.DB, componentID string) ([]ComponentAttribut
 	return attrs, rows.Err()
 }
 
-func saveComponentAttributes(db *sql.DB, componentID string, attrs []ComponentAttribute) error {
+func saveComponentAttributes(db sqlExecer, componentID string, attrs []ComponentAttribute) error {
 	// Delete existing attributes and re-insert
 	if _, err := db.Exec(`DELETE FROM component_attributes WHERE component_id = $1`, componentID); err != nil {
 		return err

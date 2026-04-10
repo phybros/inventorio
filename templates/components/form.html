@@ -13,6 +13,14 @@
     <input type="hidden" name="_method" value="PUT">
     {{end}}
 
+    {{if .Errors}}
+    <div class="alert alert-red">
+        <ul>
+        {{range .Errors}}<li>{{.}}</li>{{end}}
+        </ul>
+    </div>
+    {{end}}
+
     <div class="form-section">
         <h2 class="form-section-title">Category</h2>
         <select name="category_id" required

@@ -167,11 +167,12 @@ type attrFieldData struct {
 }
 
 type componentFormData struct {
-	Component *Component
+	Component  *Component
 	Categories []CategoryListItem
 	Locations  []StorageLocation
 	Fields     []attrFieldData
 	IsNew      bool
+	Errors     map[string]string
 }
 
 func (app *App) HandleComponentNew(w http.ResponseWriter, r *http.Request) {
@@ -211,6 +212,64 @@ func (app *App) HandleComponentNew(w http.ResponseWriter, r *http.Request) {
 	app.renderer.RenderPage(w, "components/form", data)
 }
 
+// renderNewComponentForm re-renders the new component form with the given errors
+// and the values the user already entered, so nothing is lost on validation failure.
+func (app *App) renderNewComponentForm(w http.ResponseWriter, r *http.Request, errors map[string]string) {
+	categories, err := listAllCategories(app.db)
+	if err != nil {
+		log.Printf("error listing categories: %v", err)
+		http.Error(w, "failed to load categories", http.StatusInternalServerError)
+		return
+	}
+	locations, err := listStorageLocations(app.db)
+	if err != nil {
+		log.Printf("error listing locations: %v", err)
+		http.Error(w, "failed to load locations", http.StatusInternalServerError)
+		return
+	}
+
+	qty, _ := strconv.Atoi(r.FormValue("quantity"))
+	minQty, _ := strconv.Atoi(r.FormValue("min_quantity"))
+	comp := &Component{
+		CategoryID:  r.FormValue("category_id"),
+		Quantity:    qty,
+		MinQuantity: minQty,
+	}
+	if v := r.FormValue("mpn"); v != "" {
+		comp.MPN = &v
+	}
+	if v := r.FormValue("manufacturer"); v != "" {
+		comp.Manufacturer = &v
+	}
+	if v := r.FormValue("description"); v != "" {
+		comp.Description = &v
+	}
+	if v := r.FormValue("location_id"); v != "" {
+		comp.LocationID = &v
+	}
+	if v := r.FormValue("datasheet_url"); v != "" {
+		comp.DatasheetURL = &v
+	}
+	if v := r.FormValue("notes"); v != "" {
+		comp.Notes = &v
+	}
+
+	var fields []attrFieldData
+	if comp.CategoryID != "" {
+		fields, _ = app.buildAttrFields(comp.CategoryID, nil)
+	}
+
+	w.WriteHeader(http.StatusUnprocessableEntity)
+	app.renderer.RenderPage(w, "components/form", componentFormData{
+		Component:  comp,
+		Categories: categories,
+		Locations:  locations,
+		Fields:     fields,
+		IsNew:      true,
+		Errors:     errors,
+	})
+}
+
 func (app *App) HandleComponentCreate(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "invalid form data", http.StatusBadRequest)
@@ -219,7 +278,7 @@ func (app *App) HandleComponentCreate(w http.ResponseWriter, r *http.Request) {
 
 	categoryID := r.FormValue("category_id")
 	if categoryID == "" {
-		http.Error(w, "category is required", http.StatusBadRequest)
+		app.renderNewComponentForm(w, r, map[string]string{"category_id": "Category is required"})
 		return
 	}
 
@@ -250,23 +309,35 @@ func (app *App) HandleComponentCreate(w http.ResponseWriter, r *http.Request) {
 		comp.Notes = &v
 	}
 
-	id, err := createComponent(app.db, comp)
-	if err != nil {
-		log.Printf("error creating component: %v", err)
-		http.Error(w, "failed to create component", http.StatusInternalServerError)
-		return
-	}
-
-	// Save attributes
 	attrs, err := app.parseAttrValues(r, categoryID)
 	if err != nil {
 		log.Printf("error parsing attributes: %v", err)
 		http.Error(w, "failed to parse attributes", http.StatusInternalServerError)
 		return
 	}
-	if err := saveComponentAttributes(app.db, id, attrs); err != nil {
+
+	tx, err := app.db.Begin()
+	if err != nil {
+		log.Printf("error beginning transaction: %v", err)
+		http.Error(w, "failed to create component", http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	id, err := createComponent(tx, comp)
+	if err != nil {
+		log.Printf("error creating component: %v", err)
+		http.Error(w, "failed to create component", http.StatusInternalServerError)
+		return
+	}
+	if err := saveComponentAttributes(tx, id, attrs); err != nil {
 		log.Printf("error saving attributes: %v", err)
 		http.Error(w, "failed to save attributes", http.StatusInternalServerError)
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		log.Printf("error committing transaction: %v", err)
+		http.Error(w, "failed to create component", http.StatusInternalServerError)
 		return
 	}
 
@@ -368,21 +439,34 @@ func (app *App) HandleComponentUpdate(w http.ResponseWriter, r *http.Request) {
 		comp.Notes = &v
 	}
 
-	if err := updateComponent(app.db, comp); err != nil {
-		log.Printf("error updating component: %v", err)
-		http.Error(w, "failed to update component", http.StatusInternalServerError)
-		return
-	}
-
 	attrs, err := app.parseAttrValues(r, categoryID)
 	if err != nil {
 		log.Printf("error parsing attributes: %v", err)
 		http.Error(w, "failed to parse attributes", http.StatusInternalServerError)
 		return
 	}
-	if err := saveComponentAttributes(app.db, id, attrs); err != nil {
+
+	tx, err := app.db.Begin()
+	if err != nil {
+		log.Printf("error beginning transaction: %v", err)
+		http.Error(w, "failed to update component", http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	if err := updateComponent(tx, comp); err != nil {
+		log.Printf("error updating component: %v", err)
+		http.Error(w, "failed to update component", http.StatusInternalServerError)
+		return
+	}
+	if err := saveComponentAttributes(tx, id, attrs); err != nil {
 		log.Printf("error saving attributes: %v", err)
 		http.Error(w, "failed to save attributes", http.StatusInternalServerError)
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		log.Printf("error committing transaction: %v", err)
+		http.Error(w, "failed to update component", http.StatusInternalServerError)
 		return
 	}
 
