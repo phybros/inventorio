@@ -135,6 +135,7 @@ func (app *App) HandleComponentList(w http.ResponseWriter, r *http.Request) {
 type componentDetailData struct {
 	Component  *Component
 	Attributes []ComponentAttribute
+	Components []ComponentListItem // for merge picker
 }
 
 func (app *App) HandleComponentDetail(w http.ResponseWriter, r *http.Request) {
@@ -154,9 +155,17 @@ func (app *App) HandleComponentDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	allComps, err := listAllComponents(app.db)
+	if err != nil {
+		log.Printf("error listing components for merge picker: %v", err)
+		http.Error(w, "failed to load components", http.StatusInternalServerError)
+		return
+	}
+
 	app.renderer.RenderPage(w, "components/detail", componentDetailData{
 		Component:  comp,
 		Attributes: attrs,
+		Components: allComps,
 	})
 }
 

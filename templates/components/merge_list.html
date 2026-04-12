@@ -1,0 +1,71 @@
+{{define "content"}}
+<div class="page-header mb-6">
+    <div>
+        <h1 class="page-title">Duplicate Components</h1>
+        <p class="text-muted mt-1">Components sharing the same MPN. Merge duplicates to consolidate your inventory.</p>
+    </div>
+    <a href="/components" class="btn btn-secondary">Back to Components</a>
+</div>
+
+{{if not .Groups}}
+<div class="empty-state">
+    <div style="font-size:2.5rem;margin-bottom:0.75rem;">✓</div>
+    <p class="text-muted">No duplicate MPNs found. Your inventory is clean.</p>
+</div>
+{{else}}
+<div class="space-y-4">
+{{range .Groups}}
+<div class="card">
+    <div class="card-body">
+        <div class="flex-row-between mb-3">
+            <h2 class="font-medium" style="font-size:1rem;">MPN: <strong>{{.MPN}}</strong></h2>
+            <span class="badge badge-yellow">{{len .Components}} entries</span>
+        </div>
+
+        <table class="table mb-4">
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>Category</th>
+                    <th>Manufacturer</th>
+                    <th>Description</th>
+                    <th style="text-align:right">Qty</th>
+                    <th>Location</th>
+                </tr>
+            </thead>
+            <tbody>
+            {{range $i, $c := .Components}}
+            <tr>
+                <td style="width:1.5rem;color:var(--text-muted);font-size:0.75rem;font-weight:600;">
+                    {{if eq $i 0}}A{{else if eq $i 1}}B{{else}}C{{end}}
+                </td>
+                <td>{{$c.CategoryName}}</td>
+                <td>{{if $c.Manufacturer}}{{deref $c.Manufacturer}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+                <td>{{if $c.Description}}{{deref $c.Description}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+                <td style="text-align:right">{{$c.Quantity}}</td>
+                <td>{{if $c.LocationName}}{{deref $c.LocationName}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+            </tr>
+            {{end}}
+            </tbody>
+        </table>
+
+        {{if ge (len .Components) 2}}
+        {{$a := index .Components 0}}
+        {{$b := index .Components 1}}
+        <div class="flex-row gap-2">
+            <a href="/components/merge/preview?a={{$a.ID}}&b={{$b.ID}}" class="btn btn-primary btn-sm">
+                Merge A &amp; B &rarr;
+            </a>
+            {{if gt (len .Components) 2}}
+            <span class="text-muted" style="font-size:0.8125rem;align-self:center;">
+                {{sub (len .Components) 2}} more — merge iteratively
+            </span>
+            {{end}}
+        </div>
+        {{end}}
+    </div>
+</div>
+{{end}}
+</div>
+{{end}}
+{{end}}

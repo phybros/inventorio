@@ -1146,3 +1146,66 @@ func listAuditLog(db *sql.DB, limit, offset int) ([]AuditLogEntry, int, error) {
 	}
 	return entries, total, rows.Err()
 }
+
+// --- Merge ---
+
+// findDuplicateComponents returns all components whose MPN appears more than once,
+// grouped by MPN and ordered by created_at within each group.
+func findDuplicateComponents(db *sql.DB) ([]DuplicateMPNGroup, error) {
+	rows, err := db.Query(`
+		SELECT c.id, c.category_id, cat.name, c.mpn, c.manufacturer, c.description,
+		       c.quantity, c.min_quantity, c.location_id, sl.name,
+		       c.datasheet_url, c.notes, c.created_at, c.updated_at
+		FROM components c
+		JOIN categories cat ON c.category_id = cat.id
+		LEFT JOIN storage_locations sl ON c.location_id = sl.id
+		WHERE c.mpn IN (
+			SELECT mpn FROM components
+			WHERE mpn IS NOT NULL AND mpn != ''
+			GROUP BY mpn HAVING COUNT(*) > 1
+		)
+		ORDER BY c.mpn, c.created_at
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	groupMap := make(map[string]*DuplicateMPNGroup)
+	var order []string
+
+	for rows.Next() {
+		var c Component
+		if err := rows.Scan(&c.ID, &c.CategoryID, &c.CategoryName, &c.MPN, &c.Manufacturer,
+			&c.Description, &c.Quantity, &c.MinQuantity, &c.LocationID, &c.LocationName,
+			&c.DatasheetURL, &c.Notes, &c.CreatedAt, &c.UpdatedAt); err != nil {
+			return nil, err
+		}
+		mpn := ""
+		if c.MPN != nil {
+			mpn = *c.MPN
+		}
+		if _, ok := groupMap[mpn]; !ok {
+			groupMap[mpn] = &DuplicateMPNGroup{MPN: mpn}
+			order = append(order, mpn)
+		}
+		groupMap[mpn].Components = append(groupMap[mpn].Components, c)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	var groups []DuplicateMPNGroup
+	for _, mpn := range order {
+		groups = append(groups, *groupMap[mpn])
+	}
+	return groups, nil
+}
+
+// reassignBOMItems moves all project_bom_items references from one component to another.
+func reassignBOMItems(db sqlExecer, fromID, toID string) error {
+	_, err := db.Exec(`
+		UPDATE project_bom_items SET component_id = $2 WHERE component_id = $1
+	`, fromID, toID)
+	return err
+}

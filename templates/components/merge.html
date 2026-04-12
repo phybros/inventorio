@@ -1,0 +1,391 @@
+{{define "content"}}
+<div class="mb-6">
+    <a href="/components/merge" class="link">&larr; Back to Duplicates</a>
+</div>
+
+<div class="page-header mb-2">
+    <div>
+        <h1 class="page-title">Merge Components</h1>
+        <p class="text-muted mt-1">
+            MPN: <strong>{{if .CompA.MPN}}{{deref .CompA.MPN}}{{end}}</strong>
+            &mdash; pick the best value for each field, then confirm the merge.
+            Component B will be deleted; all BOM references will be reassigned to A.
+        </p>
+    </div>
+</div>
+
+<form action="/components/merge" method="POST" class="space-y-6">
+    <input type="hidden" name="survivor_id" value="{{.CompA.ID}}">
+    <input type="hidden" name="loser_id"    value="{{.CompB.ID}}">
+
+    <!-- ── Source labels ─────────────────────────────────────────────── -->
+    <div class="merge-source-bar">
+        <div class="merge-source-a">
+            <span class="merge-source-badge merge-badge-a">A</span>
+            <span class="merge-source-name">
+                {{if .CompA.MPN}}{{deref .CompA.MPN}}{{else}}—{{end}}
+                {{if .CompA.Manufacturer}}&nbsp;&middot;&nbsp;{{deref .CompA.Manufacturer}}{{end}}
+            </span>
+            <a href="/components/{{.CompA.ID}}" class="link text-sm" target="_blank">view &nearr;</a>
+        </div>
+        <div class="merge-source-b">
+            <span class="merge-source-badge merge-badge-b">B</span>
+            <span class="merge-source-name">
+                {{if .CompB.MPN}}{{deref .CompB.MPN}}{{else}}—{{end}}
+                {{if .CompB.Manufacturer}}&nbsp;&middot;&nbsp;{{deref .CompB.Manufacturer}}{{end}}
+            </span>
+            <a href="/components/{{.CompB.ID}}" class="link text-sm" target="_blank">view &nearr;</a>
+        </div>
+    </div>
+
+    <!-- ── Core fields ────────────────────────────────────────────────── -->
+    <div class="form-section">
+        <h2 class="form-section-title">Core Details</h2>
+        <div class="merge-table-wrapper">
+            <table class="merge-table">
+                <colgroup>
+                    <col style="width:9rem">
+                    <col>
+                    <col>
+                    <col style="width:18rem">
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th>Field</th>
+                        <th><span class="merge-source-badge merge-badge-a">A</span> (survivor)</th>
+                        <th><span class="merge-source-badge merge-badge-b">B</span> (will be deleted)</th>
+                        <th>Final value</th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                <!-- MPN -->
+                <tr>
+                    <td class="merge-field-label">MPN</td>
+                    <td class="merge-val-cell">
+                        <span class="merge-val">{{if .CompA.MPN}}{{deref .CompA.MPN}}{{else}}<em class="text-muted">—</em>{{end}}</span>
+                        {{if .CompA.MPN}}<button type="button" class="btn-use" data-target="field-mpn" data-value="{{deref .CompA.MPN}}" onclick="mergeUse(this)">Use A</button>{{end}}
+                    </td>
+                    <td class="merge-val-cell">
+                        <span class="merge-val">{{if .CompB.MPN}}{{deref .CompB.MPN}}{{else}}<em class="text-muted">—</em>{{end}}</span>
+                        {{if .CompB.MPN}}<button type="button" class="btn-use" data-target="field-mpn" data-value="{{deref .CompB.MPN}}" onclick="mergeUse(this)">Use B</button>{{end}}
+                    </td>
+                    <td>
+                        <input type="text" id="field-mpn" name="mpn" class="input input-sm"
+                               value="{{if .CompA.MPN}}{{deref .CompA.MPN}}{{else if .CompB.MPN}}{{deref .CompB.MPN}}{{end}}">
+                    </td>
+                </tr>
+
+                <!-- Manufacturer -->
+                <tr>
+                    <td class="merge-field-label">Manufacturer</td>
+                    <td class="merge-val-cell">
+                        <span class="merge-val">{{if .CompA.Manufacturer}}{{deref .CompA.Manufacturer}}{{else}}<em class="text-muted">—</em>{{end}}</span>
+                        {{if .CompA.Manufacturer}}<button type="button" class="btn-use" data-target="field-manufacturer" data-value="{{deref .CompA.Manufacturer}}" onclick="mergeUse(this)">Use A</button>{{end}}
+                    </td>
+                    <td class="merge-val-cell">
+                        <span class="merge-val">{{if .CompB.Manufacturer}}{{deref .CompB.Manufacturer}}{{else}}<em class="text-muted">—</em>{{end}}</span>
+                        {{if .CompB.Manufacturer}}<button type="button" class="btn-use" data-target="field-manufacturer" data-value="{{deref .CompB.Manufacturer}}" onclick="mergeUse(this)">Use B</button>{{end}}
+                    </td>
+                    <td>
+                        <input type="text" id="field-manufacturer" name="manufacturer" class="input input-sm"
+                               value="{{if .CompA.Manufacturer}}{{deref .CompA.Manufacturer}}{{else if .CompB.Manufacturer}}{{deref .CompB.Manufacturer}}{{end}}">
+                    </td>
+                </tr>
+
+                <!-- Description -->
+                <tr>
+                    <td class="merge-field-label">Description</td>
+                    <td class="merge-val-cell">
+                        <span class="merge-val">{{if .CompA.Description}}{{deref .CompA.Description}}{{else}}<em class="text-muted">—</em>{{end}}</span>
+                        {{if .CompA.Description}}<button type="button" class="btn-use" data-target="field-description" data-value="{{deref .CompA.Description}}" onclick="mergeUse(this)">Use A</button>{{end}}
+                    </td>
+                    <td class="merge-val-cell">
+                        <span class="merge-val">{{if .CompB.Description}}{{deref .CompB.Description}}{{else}}<em class="text-muted">—</em>{{end}}</span>
+                        {{if .CompB.Description}}<button type="button" class="btn-use" data-target="field-description" data-value="{{deref .CompB.Description}}" onclick="mergeUse(this)">Use B</button>{{end}}
+                    </td>
+                    <td>
+                        <input type="text" id="field-description" name="description" class="input input-sm"
+                               value="{{if .CompA.Description}}{{deref .CompA.Description}}{{else if .CompB.Description}}{{deref .CompB.Description}}{{end}}">
+                    </td>
+                </tr>
+
+                <!-- Quantity (default: sum) -->
+                <tr>
+                    <td class="merge-field-label">Quantity</td>
+                    <td class="merge-val-cell">
+                        <span class="merge-val">{{.CompA.Quantity}}</span>
+                        <button type="button" class="btn-use" data-target="field-quantity" data-value="{{.CompA.Quantity}}" onclick="mergeUse(this)">Use A</button>
+                    </td>
+                    <td class="merge-val-cell">
+                        <span class="merge-val">{{.CompB.Quantity}}</span>
+                        <button type="button" class="btn-use" data-target="field-quantity" data-value="{{.CompB.Quantity}}" onclick="mergeUse(this)">Use B</button>
+                        <button type="button" class="btn-use btn-use-sum" data-target="field-quantity" data-value="{{.SumQty}}" onclick="mergeUse(this)">Sum ({{.SumQty}})</button>
+                    </td>
+                    <td>
+                        <input type="number" id="field-quantity" name="quantity" min="0" class="input input-sm" value="{{.SumQty}}">
+                    </td>
+                </tr>
+
+                <!-- Min Quantity -->
+                <tr>
+                    <td class="merge-field-label">Min Qty</td>
+                    <td class="merge-val-cell">
+                        <span class="merge-val">{{.CompA.MinQuantity}}</span>
+                        <button type="button" class="btn-use" data-target="field-min-quantity" data-value="{{.CompA.MinQuantity}}" onclick="mergeUse(this)">Use A</button>
+                    </td>
+                    <td class="merge-val-cell">
+                        <span class="merge-val">{{.CompB.MinQuantity}}</span>
+                        <button type="button" class="btn-use" data-target="field-min-quantity" data-value="{{.CompB.MinQuantity}}" onclick="mergeUse(this)">Use B</button>
+                    </td>
+                    <td>
+                        <input type="number" id="field-min-quantity" name="min_quantity" min="0" class="input input-sm"
+                               value="{{if gt .CompA.MinQuantity .CompB.MinQuantity}}{{.CompA.MinQuantity}}{{else}}{{.CompB.MinQuantity}}{{end}}">
+                    </td>
+                </tr>
+
+                <!-- Category -->
+                <tr>
+                    <td class="merge-field-label">Category</td>
+                    <td class="merge-val-cell">
+                        <span class="merge-val">{{.CompA.CategoryName}}</span>
+                        <button type="button" class="btn-use" data-target="field-category-id" data-value="{{.CompA.CategoryID}}" onclick="mergeUseSelect(this)">Use A</button>
+                    </td>
+                    <td class="merge-val-cell">
+                        <span class="merge-val">{{.CompB.CategoryName}}</span>
+                        <button type="button" class="btn-use" data-target="field-category-id" data-value="{{.CompB.CategoryID}}" onclick="mergeUseSelect(this)">Use B</button>
+                    </td>
+                    <td>
+                        <select id="field-category-id" name="category_id" class="input input-sm">
+                            {{range .Categories}}
+                            <option value="{{.ID}}" {{if eq $.CompA.CategoryID .ID}}selected{{end}}>
+                                {{if .ParentName}}{{deref .ParentName}} &rarr; {{end}}{{.Name}}
+                            </option>
+                            {{end}}
+                        </select>
+                    </td>
+                </tr>
+
+                <!-- Location -->
+                <tr>
+                    <td class="merge-field-label">Location</td>
+                    <td class="merge-val-cell">
+                        <span class="merge-val">{{if .CompA.LocationName}}{{deref .CompA.LocationName}}{{else}}<em class="text-muted">—</em>{{end}}</span>
+                        {{if .CompA.LocationID}}<button type="button" class="btn-use" data-target="field-location-id" data-value="{{deref .CompA.LocationID}}" onclick="mergeUseSelect(this)">Use A</button>{{end}}
+                    </td>
+                    <td class="merge-val-cell">
+                        <span class="merge-val">{{if .CompB.LocationName}}{{deref .CompB.LocationName}}{{else}}<em class="text-muted">—</em>{{end}}</span>
+                        {{if .CompB.LocationID}}<button type="button" class="btn-use" data-target="field-location-id" data-value="{{deref .CompB.LocationID}}" onclick="mergeUseSelect(this)">Use B</button>{{end}}
+                    </td>
+                    <td>
+                        <select id="field-location-id" name="location_id" class="input input-sm">
+                            <option value="">— unassigned —</option>
+                            {{$locID := ""}}{{if .CompA.LocationID}}{{$locID = deref .CompA.LocationID}}{{end}}
+                            {{range .Locations}}
+                            <option value="{{.ID}}" {{if eq $locID .ID}}selected{{end}}>
+                                {{if .ParentName}}{{deref .ParentName}} &rsaquo; {{end}}{{.Name}}
+                            </option>
+                            {{end}}
+                        </select>
+                    </td>
+                </tr>
+
+                <!-- Datasheet URL -->
+                <tr>
+                    <td class="merge-field-label">Datasheet URL</td>
+                    <td class="merge-val-cell">
+                        <span class="merge-val">{{if .CompA.DatasheetURL}}{{deref .CompA.DatasheetURL}}{{else}}<em class="text-muted">—</em>{{end}}</span>
+                        {{if .CompA.DatasheetURL}}<button type="button" class="btn-use" data-target="field-datasheet-url" data-value="{{deref .CompA.DatasheetURL}}" onclick="mergeUse(this)">Use A</button>{{end}}
+                    </td>
+                    <td class="merge-val-cell">
+                        <span class="merge-val">{{if .CompB.DatasheetURL}}{{deref .CompB.DatasheetURL}}{{else}}<em class="text-muted">—</em>{{end}}</span>
+                        {{if .CompB.DatasheetURL}}<button type="button" class="btn-use" data-target="field-datasheet-url" data-value="{{deref .CompB.DatasheetURL}}" onclick="mergeUse(this)">Use B</button>{{end}}
+                    </td>
+                    <td>
+                        <input type="url" id="field-datasheet-url" name="datasheet_url" class="input input-sm"
+                               value="{{if .CompA.DatasheetURL}}{{deref .CompA.DatasheetURL}}{{else if .CompB.DatasheetURL}}{{deref .CompB.DatasheetURL}}{{end}}">
+                    </td>
+                </tr>
+
+                <!-- Notes -->
+                <tr>
+                    <td class="merge-field-label">Notes</td>
+                    <td class="merge-val-cell">
+                        <span class="merge-val">{{if .CompA.Notes}}{{deref .CompA.Notes}}{{else}}<em class="text-muted">—</em>{{end}}</span>
+                        {{if .CompA.Notes}}<button type="button" class="btn-use" data-target="field-notes" data-value="{{deref .CompA.Notes}}" onclick="mergeUse(this)">Use A</button>{{end}}
+                    </td>
+                    <td class="merge-val-cell">
+                        <span class="merge-val">{{if .CompB.Notes}}{{deref .CompB.Notes}}{{else}}<em class="text-muted">—</em>{{end}}</span>
+                        {{if .CompB.Notes}}<button type="button" class="btn-use" data-target="field-notes" data-value="{{deref .CompB.Notes}}" onclick="mergeUse(this)">Use B</button>{{end}}
+                    </td>
+                    <td>
+                        <textarea id="field-notes" name="notes" rows="2" class="input input-sm">{{if .CompA.Notes}}{{deref .CompA.Notes}}{{else if .CompB.Notes}}{{deref .CompB.Notes}}{{end}}</textarea>
+                    </td>
+                </tr>
+
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ── Attributes ─────────────────────────────────────────────────── -->
+    {{if .AttrRows}}
+    <div class="form-section">
+        <h2 class="form-section-title">Attributes</h2>
+        <p class="text-muted mb-3" style="font-size:0.8125rem;">
+            Attributes from both components' categories are shown. Only attributes matching
+            the final category will be saved.
+        </p>
+        <div class="merge-table-wrapper">
+            <table class="merge-table">
+                <colgroup>
+                    <col style="width:9rem">
+                    <col>
+                    <col>
+                    <col style="width:18rem">
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th>Attribute</th>
+                        <th><span class="merge-source-badge merge-badge-a">A</span></th>
+                        <th><span class="merge-source-badge merge-badge-b">B</span></th>
+                        <th>Final value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {{range .AttrRows}}
+                {{$defID := .Def.ID}}
+                <tr>
+                    <td class="merge-field-label">
+                        {{.Def.DisplayName}}
+                        {{if .Def.Unit}}<span class="form-label-hint">({{deref .Def.Unit}})</span>{{end}}
+                    </td>
+
+                    <!-- A value -->
+                    <td class="merge-val-cell">
+                        {{if .DisplayA}}
+                            <span class="merge-val">{{.DisplayA}}</span>
+                            {{if eq .Def.DataType "boolean"}}
+                            <button type="button" class="btn-use"
+                                    data-target="attr-field-{{$defID}}"
+                                    data-value="{{.RawA}}"
+                                    onclick="mergeUseBool(this)">Use A</button>
+                            {{else if eq .Def.DataType "enum"}}
+                            <button type="button" class="btn-use"
+                                    data-target="attr-field-{{$defID}}"
+                                    data-value="{{.RawA}}"
+                                    onclick="mergeUseSelect(this)">Use A</button>
+                            {{else}}
+                            <button type="button" class="btn-use"
+                                    data-target="attr-field-{{$defID}}"
+                                    data-value="{{.RawA}}"
+                                    onclick="mergeUse(this)">Use A</button>
+                            {{end}}
+                        {{else}}
+                            <em class="text-muted">—</em>
+                        {{end}}
+                    </td>
+
+                    <!-- B value -->
+                    <td class="merge-val-cell">
+                        {{if .DisplayB}}
+                            <span class="merge-val">{{.DisplayB}}</span>
+                            {{if eq .Def.DataType "boolean"}}
+                            <button type="button" class="btn-use"
+                                    data-target="attr-field-{{$defID}}"
+                                    data-value="{{.RawB}}"
+                                    onclick="mergeUseBool(this)">Use B</button>
+                            {{else if eq .Def.DataType "enum"}}
+                            <button type="button" class="btn-use"
+                                    data-target="attr-field-{{$defID}}"
+                                    data-value="{{.RawB}}"
+                                    onclick="mergeUseSelect(this)">Use B</button>
+                            {{else}}
+                            <button type="button" class="btn-use"
+                                    data-target="attr-field-{{$defID}}"
+                                    data-value="{{.RawB}}"
+                                    onclick="mergeUse(this)">Use B</button>
+                            {{end}}
+                        {{else}}
+                            <em class="text-muted">—</em>
+                        {{end}}
+                    </td>
+
+                    <!-- Final editable value -->
+                    <td>
+                        {{if eq .Def.DataType "numeric"}}
+                        <input type="text" inputmode="decimal"
+                               id="attr-field-{{$defID}}" name="attr_{{$defID}}"
+                               value="{{.Default}}"
+                               placeholder="e.g. 4.7k, 100n, 1M"
+                               class="input input-sm">
+                        {{else if eq .Def.DataType "text"}}
+                        <input type="text"
+                               id="attr-field-{{$defID}}" name="attr_{{$defID}}"
+                               value="{{.Default}}"
+                               class="input input-sm">
+                        {{else if eq .Def.DataType "enum"}}
+                        {{$defaultEnum := .Default}}
+                        <select id="attr-field-{{$defID}}" name="attr_{{$defID}}" class="input input-sm">
+                            <option value="">— select —</option>
+                            {{range .EnumValues}}
+                            <option value="{{.ID}}" {{if eq $defaultEnum .ID}}selected{{end}}>{{.DisplayName}}</option>
+                            {{end}}
+                        </select>
+                        {{else if eq .Def.DataType "boolean"}}
+                        <label class="check-label" style="padding-top:0.25rem">
+                            <input type="checkbox"
+                                   id="attr-field-{{$defID}}" name="attr_{{$defID}}"
+                                   value="on"
+                                   {{if eq .Default "on"}}checked{{end}}
+                                   class="checkbox">
+                            <span>Yes</span>
+                        </label>
+                        {{end}}
+                    </td>
+                </tr>
+                {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {{end}}
+
+    <!-- ── Actions ───────────────────────────────────────────────────── -->
+    <div class="form-actions">
+        <button type="submit" class="btn btn-danger"
+                onclick="return confirm('Merge these two components? Component B will be permanently deleted.')">
+            Confirm Merge
+        </button>
+        <a href="/components/merge" class="link-muted">Cancel</a>
+    </div>
+</form>
+
+<script>
+function mergeUse(btn) {
+    var el = document.getElementById(btn.dataset.target);
+    if (!el) return;
+    el.value = btn.dataset.value;
+    flash(el);
+}
+
+function mergeUseSelect(btn) {
+    var el = document.getElementById(btn.dataset.target);
+    if (!el) return;
+    el.value = btn.dataset.value;
+    flash(el);
+}
+
+function mergeUseBool(btn) {
+    var el = document.getElementById(btn.dataset.target);
+    if (!el) return;
+    el.checked = (btn.dataset.value === 'on');
+    flash(el.closest('label') || el);
+}
+
+function flash(el) {
+    el.classList.add('merge-flash');
+    setTimeout(function() { el.classList.remove('merge-flash'); }, 500);
+}
+</script>
+{{end}}

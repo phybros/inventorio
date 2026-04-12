@@ -14,11 +14,49 @@
     </div>
     <div class="flex-row gap-3">
         <a href="/components/{{.Component.ID}}/edit" class="btn btn-primary">Edit</a>
+        <button type="button" class="btn btn-secondary" onclick="toggleMergePicker()">Merge with&hellip;</button>
         <button hx-delete="/components/{{.Component.ID}}"
                 hx-confirm="Delete this component?"
                 class="btn btn-danger">Delete</button>
     </div>
 </div>
+
+<div id="merge-picker" style="display:none" class="card card-body mb-6">
+    <h3 class="form-section-title mb-3">Merge with another component</h3>
+    <p class="text-muted mb-3" style="font-size:0.8125rem">
+        This component will be <strong>Component A</strong> (survivor). The one you pick below will be
+        <strong>Component B</strong> (deleted after merge).
+    </p>
+    <form action="/components/merge/preview" method="GET" class="flex-row gap-3" style="align-items:flex-end;flex-wrap:wrap">
+        <input type="hidden" name="a" value="{{.Component.ID}}">
+        <div class="form-group" style="flex:1;min-width:16rem">
+            <label class="form-label">Component B</label>
+            <select name="b" required
+                    data-combobox
+                    data-placeholder="Search by MPN, manufacturer, description…"
+                    class="input">
+                <option value="">Select a component…</option>
+                {{range .Components}}
+                {{if ne .ID $.Component.ID}}
+                <option value="{{.ID}}">
+                    {{if .MPN}}{{deref .MPN}}{{else}}[no MPN]{{end}}{{if .Manufacturer}} — {{deref .Manufacturer}}{{end}}{{if .Description}} · {{deref .Description}}{{end}}
+                </option>
+                {{end}}
+                {{end}}
+            </select>
+        </div>
+        <div class="form-group" style="flex-shrink:0">
+            <button type="submit" class="btn btn-primary">Open Merge &rarr;</button>
+        </div>
+    </form>
+</div>
+
+<script>
+function toggleMergePicker() {
+    var el = document.getElementById('merge-picker');
+    el.style.display = el.style.display === 'none' ? '' : 'none';
+}
+</script>
 
 <div class="detail-grid">
     <div class="space-y-6">

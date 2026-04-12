@@ -192,6 +192,36 @@ type ProjectBuild struct {
 	BuiltAt    time.Time
 }
 
+type DuplicateMPNGroup struct {
+	MPN        string
+	Components []Component
+}
+
+type mergeAttrRow struct {
+	Def        AttributeDefinition
+	EnumValues []EnumValue
+	AttrA      *ComponentAttribute // nil if component A doesn't have this attr
+	AttrB      *ComponentAttribute // nil if component B doesn't have this attr
+	DisplayA   string              // human-readable value from A
+	DisplayB   string              // human-readable value from B
+	RawA       string              // form-submission-ready value from A
+	RawB       string              // form-submission-ready value from B
+	Default    string              // pre-filled final value (A if set, else B)
+}
+
+type mergePage struct {
+	CompA      *Component
+	CompB      *Component
+	AttrRows   []mergeAttrRow
+	Categories []CategoryListItem
+	Locations  []StorageLocation
+	SumQty     int
+}
+
+type mergeListPage struct {
+	Groups []DuplicateMPNGroup
+}
+
 type AuditLogEntry struct {
 	ID        string
 	TableName string
