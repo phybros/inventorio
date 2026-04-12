@@ -1,0 +1,109 @@
+{{$projectID := .ProjectID}}
+{{$buildable := .Buildable}}
+{{$maxBuildable := .MaxBuildable}}
+{{$shortageCount := .ShortageCount}}
+
+<div id="bom-status" class="mb-3">
+    {{if not .BOMItems}}
+        <p class="text-muted italic">No components in BOM yet.</p>
+    {{else if $buildable}}
+        <div class="flex-row gap-2" style="align-items:center">
+            <span class="badge badge-green" style="font-size:0.875rem;padding:0.25rem 0.75rem">Ready to Build</span>
+            <span class="text-muted" style="font-size:0.875rem">Can build up to <strong>{{$maxBuildable}}</strong> unit{{if ne $maxBuildable 1}}s{{end}}</span>
+        </div>
+    {{else}}
+        <div class="flex-row gap-2" style="align-items:center">
+            <span class="badge badge-red" style="font-size:0.875rem;padding:0.25rem 0.75rem">Cannot Build</span>
+            <span class="text-muted" style="font-size:0.875rem">{{$shortageCount}} item{{if ne $shortageCount 1}}s{{end}} short</span>
+        </div>
+    {{end}}
+</div>
+
+{{if .BOMItems}}
+<div class="table-wrap mb-4">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Component</th>
+                <th>Category</th>
+                <th>Ref</th>
+                <th class="td-center">Required</th>
+                <th class="td-center">In Stock</th>
+                <th class="td-center">Status</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .BOMItems}}
+            <tr id="bom-item-{{.ID}}" class="table-row-hover">
+                <td>
+                    <a href="/components/{{.ComponentID}}" class="link font-medium">
+                        {{if .ComponentMPN}}{{deref .ComponentMPN}}{{else}}<span class="italic text-subtle">no MPN</span>{{end}}
+                    </a>
+                    {{if .ComponentManufacturer}}<div class="text-muted" style="font-size:0.8125rem">{{deref .ComponentManufacturer}}</div>{{end}}
+                </td>
+                <td class="td-muted">{{.ComponentCategoryName}}</td>
+                <td class="td-muted" style="font-size:0.8125rem">{{if .Reference}}{{deref .Reference}}{{else}}—{{end}}</td>
+                <td class="td-center">
+                    <span class="font-mono">{{.Quantity}}</span>
+                </td>
+                <td class="td-center">
+                    <span class="font-mono {{if not .Sufficient}}text-red{{end}}">{{.ComponentQuantity}}</span>
+                </td>
+                <td class="td-center">
+                    {{if .Sufficient}}
+                        <span class="text-green" title="Sufficient stock">✓</span>
+                    {{else}}
+                        <span class="badge badge-red" style="font-size:0.75rem">Short by {{.Shortage}}</span>
+                    {{end}}
+                </td>
+                <td class="td-right">
+                    <button hx-delete="/projects/bom/{{.ID}}"
+                            hx-target="#bom-section"
+                            hx-swap="innerHTML"
+                            hx-confirm="Remove this component from the BOM?"
+                            class="link-danger">Remove</button>
+                </td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</div>
+{{end}}
+
+<form hx-post="/projects/{{$projectID}}/bom"
+      hx-target="#bom-section"
+      hx-swap="innerHTML"
+      hx-on::after-request="if(event.detail.successful) { this.reset(); }"
+      class="card card-body">
+    <div class="form-section-title mb-3">Add Component to BOM</div>
+    <div class="flex-row gap-3" style="flex-wrap:wrap;align-items:flex-end">
+        <div class="form-group" style="flex:1;min-width:16rem">
+            <label class="form-label">Component <span class="form-required">*</span></label>
+            <select name="component_id" required
+                    data-combobox data-allow-create="true"
+                    data-create-url="/api/components/quick-create"
+                    data-placeholder="Search or add component..."
+                    class="input">
+                <option value="">Select a component...</option>
+                {{range .Components}}
+                <option value="{{.ID}}">
+                    {{if .MPN}}{{deref .MPN}}{{else}}[no MPN]{{end}}{{if .Manufacturer}} — {{deref .Manufacturer}}{{end}}
+                </option>
+                {{end}}
+            </select>
+        </div>
+        <div class="form-group" style="width:6rem">
+            <label class="form-label">Qty</label>
+            <input type="number" name="quantity" value="1" min="1" class="input">
+        </div>
+        <div class="form-group" style="flex:0.5;min-width:8rem">
+            <label class="form-label">Ref <span class="form-label-hint">(optional)</span></label>
+            <input type="text" name="reference" placeholder="R1, C2…" class="input">
+        </div>
+        <div class="form-group" style="padding-bottom:0.1rem">
+            <label class="form-label">&nbsp;</label>
+            <button type="submit" class="btn btn-primary">Add</button>
+        </div>
+    </div>
+</form>

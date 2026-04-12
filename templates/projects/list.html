@@ -1,0 +1,68 @@
+{{define "content"}}
+<div class="page-header">
+    <h1 class="page-title">Projects</h1>
+    <a href="/projects/new" class="btn btn-primary">New Project</a>
+</div>
+
+<div class="mb-4">
+    <div class="flex-row gap-2">
+        <a href="/projects" class="btn btn-sm {{if eq .Status ""}}btn-primary{{else}}btn-secondary{{end}}">All</a>
+        <a href="/projects?status=active" class="btn btn-sm {{if eq .Status "active"}}btn-primary{{else}}btn-secondary{{end}}">Active</a>
+        <a href="/projects?status=draft" class="btn btn-sm {{if eq .Status "draft"}}btn-primary{{else}}btn-secondary{{end}}">Draft</a>
+        <a href="/projects?status=archived" class="btn btn-sm {{if eq .Status "archived"}}btn-primary{{else}}btn-secondary{{end}}">Archived</a>
+    </div>
+</div>
+
+<div class="table-wrap">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Status</th>
+                <th class="td-center">BOM Items</th>
+                <th class="td-center">Buildable</th>
+                <th class="td-center">Builds</th>
+                <th>Updated</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {{if not .Projects}}
+            <tr>
+                <td colspan="7" class="table-empty">
+                    No projects yet. <a href="/projects/new" class="link">Create one.</a>
+                </td>
+            </tr>
+            {{end}}
+            {{range .Projects}}
+            <tr class="table-row-hover">
+                <td>
+                    <a href="/projects/{{.ID}}" class="link font-medium">{{.Name}}</a>
+                    {{if .Description}}<div class="text-muted truncate" style="font-size:0.8125rem;max-width:24rem">{{deref .Description}}</div>{{end}}
+                </td>
+                <td>
+                    {{if eq .Status "active"}}<span class="badge badge-green">Active</span>
+                    {{else if eq .Status "draft"}}<span class="badge badge-yellow">Draft</span>
+                    {{else}}<span class="badge" style="background:var(--surface-2);color:var(--text-muted)">Archived</span>{{end}}
+                </td>
+                <td class="td-center td-muted">{{.BOMItemCount}}</td>
+                <td class="td-center">
+                    {{if eq .BOMItemCount 0}}
+                        <span class="text-subtle" style="font-size:0.8125rem">—</span>
+                    {{else if .Buildable}}
+                        <span class="badge badge-green">Ready</span>
+                    {{else}}
+                        <span class="badge badge-red">Short ({{.ShortageCount}})</span>
+                    {{end}}
+                </td>
+                <td class="td-center td-muted">{{.BuildCount}}</td>
+                <td class="td-muted" style="font-size:0.8125rem">{{.UpdatedAt.Format "2006-01-02"}}</td>
+                <td class="td-right">
+                    <a href="/projects/{{.ID}}" class="link-muted">View</a>
+                </td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</div>
+{{end}}

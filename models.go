@@ -143,6 +143,55 @@ type AttrFilter struct {
 	BoolValue   *bool
 }
 
+type Project struct {
+	ID          string
+	Name        string
+	Status      string // "draft", "active", "archived"
+	Description *string
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+type ProjectListItem struct {
+	ID            string
+	Name          string
+	Status        string
+	Description   *string
+	BOMItemCount  int
+	Buildable     bool
+	ShortageCount int
+	BuildCount    int
+	UpdatedAt     time.Time
+}
+
+type BOMItem struct {
+	ID          string
+	ProjectID   string
+	ComponentID string
+	Quantity    int
+	SortOrder   int
+	Reference   *string
+	Notes       *string
+	// Joined from components
+	ComponentMPN          *string
+	ComponentManufacturer *string
+	ComponentDescription  *string
+	ComponentQuantity     int
+	ComponentCategoryName string
+	ComponentLocationName *string
+	// Calculated
+	Sufficient bool
+	Shortage   int
+}
+
+type ProjectBuild struct {
+	ID         string
+	ProjectID  string
+	Multiplier int
+	Notes      *string
+	BuiltAt    time.Time
+}
+
 type AuditLogEntry struct {
 	ID        string
 	TableName string

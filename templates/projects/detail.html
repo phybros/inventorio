@@ -1,0 +1,219 @@
+{{define "content"}}
+<div class="mb-6">
+    <a href="/projects" class="link">&larr; Back to Projects</a>
+</div>
+
+<div class="page-header mb-6">
+    <div>
+        <div class="flex-row gap-3" style="align-items:center;margin-bottom:0.25rem">
+            <h1 class="page-title" style="margin:0">{{.Project.Name}}</h1>
+            {{if eq .Project.Status "active"}}<span class="badge badge-green">Active</span>
+            {{else if eq .Project.Status "draft"}}<span class="badge badge-yellow">Draft</span>
+            {{else}}<span class="badge" style="background:var(--surface-2);color:var(--text-muted)">Archived</span>{{end}}
+        </div>
+        {{if .Project.Description}}<p class="text-muted" style="margin:0">{{deref .Project.Description}}</p>{{end}}
+    </div>
+    <div class="flex-row gap-3">
+        <a href="/projects/{{.Project.ID}}/edit" class="btn btn-secondary">Edit</a>
+        <form action="/projects/{{.Project.ID}}/duplicate" method="POST" style="display:inline">
+            <button type="submit" class="btn btn-secondary">Duplicate</button>
+        </form>
+        <button hx-delete="/projects/{{.Project.ID}}"
+                hx-confirm="Delete project '{{.Project.Name}}'? This cannot be undone."
+                class="btn btn-danger">Delete</button>
+    </div>
+</div>
+
+<div class="detail-grid">
+    {{/* Left column: BOM */}}
+    <div class="space-y-6">
+        <div class="card card-body">
+            <h2 class="form-section-title mb-4">Bill of Materials</h2>
+            <div id="bom-section">
+                {{template "bom_section_inner" .}}
+            </div>
+        </div>
+    </div>
+
+    {{/* Right column: Build panel + history */}}
+    <div class="space-y-6">
+        <div class="card card-body">
+            <h2 class="form-section-title mb-4">Build</h2>
+
+            <div class="mb-4">
+                {{if not .BOMItems}}
+                    <p class="text-muted italic" style="font-size:0.875rem">Add components to the BOM before building.</p>
+                {{else if .Buildable}}
+                    <div class="text-green" style="font-size:1.125rem;font-weight:600;margin-bottom:0.25rem">Ready to Build</div>
+                    <div class="text-muted" style="font-size:0.875rem">Up to <strong>{{.MaxBuildable}}</strong> unit{{if ne .MaxBuildable 1}}s{{end}} with current stock</div>
+                {{else}}
+                    <div class="text-red" style="font-size:1.125rem;font-weight:600;margin-bottom:0.25rem">Cannot Build</div>
+                    <div class="text-muted" style="font-size:0.875rem">{{.ShortageCount}} item{{if ne .ShortageCount 1}}s{{end}} have insufficient stock</div>
+                {{end}}
+            </div>
+
+            {{if .BOMItems}}
+            <form hx-post="/projects/{{.Project.ID}}/build"
+                  hx-target="#build-result"
+                  hx-swap="innerHTML"
+                  class="space-y-3">
+                <div class="form-group">
+                    <label class="form-label">Units to build</label>
+                    <input type="number" name="multiplier" value="1" min="1" class="input" style="max-width:6rem">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Notes <span class="form-label-hint">(optional)</span></label>
+                    <input type="text" name="notes" placeholder="e.g. batch 001" class="input">
+                </div>
+                <button type="submit"
+                        {{if not .Buildable}}disabled title="Insufficient stock for all BOM items"{{end}}
+                        hx-confirm="This will subtract components from inventory. Continue?"
+                        class="btn btn-primary">
+                    Build
+                </button>
+            </form>
+            {{end}}
+
+            <div id="build-result" class="mt-4"></div>
+        </div>
+
+        <div class="card card-body">
+            <h2 class="form-section-title mb-3">Build History</h2>
+            {{if not .Builds}}
+            <p class="text-muted italic" style="font-size:0.875rem">No builds yet.</p>
+            {{else}}
+            <div class="table-wrap">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th class="td-center">Units</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{range .Builds}}
+                        <tr>
+                            <td class="td-muted" style="font-size:0.8125rem">{{.BuiltAt.Format "2006-01-02 15:04"}}</td>
+                            <td class="td-center font-mono">{{.Multiplier}}</td>
+                            <td class="td-muted" style="font-size:0.8125rem">{{if .Notes}}{{deref .Notes}}{{else}}—{{end}}</td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+            </div>
+            {{end}}
+        </div>
+
+        <div class="text-subtle" style="font-size:0.8125rem">
+            <p style="margin:0">Created: {{.Project.CreatedAt.Format "2006-01-02 15:04"}}</p>
+            <p style="margin:0">Updated: {{.Project.UpdatedAt.Format "2006-01-02 15:04"}}</p>
+        </div>
+    </div>
+</div>
+{{end}}
+
+{{define "bom_section_inner"}}
+<div id="bom-status" class="mb-3">
+    {{if not .BOMItems}}
+        <p class="text-muted italic">No components in BOM yet.</p>
+    {{else if .Buildable}}
+        <div class="flex-row gap-2" style="align-items:center">
+            <span class="badge badge-green" style="font-size:0.875rem;padding:0.25rem 0.75rem">Ready to Build</span>
+            <span class="text-muted" style="font-size:0.875rem">Can build up to <strong>{{.MaxBuildable}}</strong> unit{{if ne .MaxBuildable 1}}s{{end}}</span>
+        </div>
+    {{else}}
+        <div class="flex-row gap-2" style="align-items:center">
+            <span class="badge badge-red" style="font-size:0.875rem;padding:0.25rem 0.75rem">Cannot Build</span>
+            <span class="text-muted" style="font-size:0.875rem">{{.ShortageCount}} item{{if ne .ShortageCount 1}}s{{end}} short</span>
+        </div>
+    {{end}}
+</div>
+
+{{if .BOMItems}}
+<div class="table-wrap mb-4">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Component</th>
+                <th>Category</th>
+                <th>Ref</th>
+                <th class="td-center">Required</th>
+                <th class="td-center">In Stock</th>
+                <th class="td-center">Status</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .BOMItems}}
+            <tr class="table-row-hover">
+                <td>
+                    <a href="/components/{{.ComponentID}}" class="link font-medium">
+                        {{if .ComponentMPN}}{{deref .ComponentMPN}}{{else}}<span class="italic text-subtle">no MPN</span>{{end}}
+                    </a>
+                    {{if .ComponentManufacturer}}<div class="text-muted" style="font-size:0.8125rem">{{deref .ComponentManufacturer}}</div>{{end}}
+                </td>
+                <td class="td-muted">{{.ComponentCategoryName}}</td>
+                <td class="td-muted" style="font-size:0.8125rem">{{if .Reference}}{{deref .Reference}}{{else}}—{{end}}</td>
+                <td class="td-center font-mono">{{.Quantity}}</td>
+                <td class="td-center">
+                    <span class="font-mono {{if not .Sufficient}}text-red{{end}}">{{.ComponentQuantity}}</span>
+                </td>
+                <td class="td-center">
+                    {{if .Sufficient}}
+                        <span class="text-green" title="Sufficient stock">✓</span>
+                    {{else}}
+                        <span class="badge badge-red" style="font-size:0.75rem">Short by {{.Shortage}}</span>
+                    {{end}}
+                </td>
+                <td class="td-right">
+                    <button hx-delete="/projects/bom/{{.ID}}"
+                            hx-target="#bom-section"
+                            hx-swap="innerHTML"
+                            hx-confirm="Remove this component from the BOM?"
+                            class="link-danger">Remove</button>
+                </td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</div>
+{{end}}
+
+<form hx-post="/projects/{{.Project.ID}}/bom"
+      hx-target="#bom-section"
+      hx-swap="innerHTML"
+      hx-on::after-request="if(event.detail.successful) { this.reset(); }"
+      class="card card-body">
+    <div class="form-section-title mb-3">Add Component to BOM</div>
+    <div class="flex-row gap-3" style="flex-wrap:wrap;align-items:flex-end">
+        <div class="form-group" style="flex:1;min-width:16rem">
+            <label class="form-label">Component <span class="form-required">*</span></label>
+            <select name="component_id" required
+                    data-combobox data-allow-create="true"
+                    data-create-url="/api/components/quick-create"
+                    data-placeholder="Search or add component..."
+                    class="input">
+                <option value="">Select a component...</option>
+                {{range .Components}}
+                <option value="{{.ID}}">
+                    {{if .MPN}}{{deref .MPN}}{{else}}[no MPN]{{end}}{{if .Manufacturer}} — {{deref .Manufacturer}}{{end}}
+                </option>
+                {{end}}
+            </select>
+        </div>
+        <div class="form-group" style="width:6rem">
+            <label class="form-label">Qty</label>
+            <input type="number" name="quantity" value="1" min="1" class="input">
+        </div>
+        <div class="form-group" style="flex:0.5;min-width:8rem">
+            <label class="form-label">Ref <span class="form-label-hint">(optional)</span></label>
+            <input type="text" name="reference" placeholder="R1, C2…" class="input">
+        </div>
+        <div class="form-group" style="padding-bottom:0.1rem">
+            <label class="form-label">&nbsp;</label>
+            <button type="submit" class="btn btn-primary">Add</button>
+        </div>
+    </div>
+</form>
+{{end}}

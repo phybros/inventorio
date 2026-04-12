@@ -110,11 +110,28 @@ func main() {
 	// Audit log
 	mux.HandleFunc("GET /admin/audit", app.HandleAuditLog)
 
-	// Quick-create API (JSON, used by combobox)
+	// Quick-create API (JSON, used by comboboxes) — component endpoint is in projects section above
 	mux.HandleFunc("POST /api/categories/quick-create", app.HandleCategoryQuickCreate)
 	mux.HandleFunc("POST /api/locations/quick-create", app.HandleLocationQuickCreate)
 	mux.HandleFunc("POST /api/enums/quick-create", app.HandleEnumGroupQuickCreate)
 	mux.HandleFunc("POST /api/enums/{id}/values/quick-create", app.HandleEnumValueQuickCreate)
+
+	// Projects
+	mux.HandleFunc("GET /projects", app.HandleProjectList)
+	mux.HandleFunc("GET /projects/new", app.HandleProjectNew)
+	mux.HandleFunc("POST /projects", app.HandleProjectCreate)
+	mux.HandleFunc("GET /projects/{id}", app.HandleProjectDetail)
+	mux.HandleFunc("GET /projects/{id}/edit", app.HandleProjectEdit)
+	mux.HandleFunc("PUT /projects/{id}", app.HandleProjectUpdate)
+	mux.HandleFunc("DELETE /projects/{id}", app.HandleProjectDelete)
+	mux.HandleFunc("POST /projects/{id}/duplicate", app.HandleProjectDuplicate)
+	mux.HandleFunc("POST /projects/{id}/bom", app.HandleBOMItemAdd)
+	mux.HandleFunc("PUT /projects/bom/{itemId}", app.HandleBOMItemUpdate)
+	mux.HandleFunc("DELETE /projects/bom/{itemId}", app.HandleBOMItemDelete)
+	mux.HandleFunc("POST /projects/{id}/build", app.HandleProjectBuild)
+
+	// Quick-create API (JSON, used by combobox)
+	mux.HandleFunc("POST /api/components/quick-create", app.HandleComponentQuickCreate)
 
 	// Import
 	mux.HandleFunc("GET /import", app.HandleImportPage)

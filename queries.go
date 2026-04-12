@@ -472,6 +472,35 @@ func importMergeComponent(db *sql.DB, id string, addQty int, mfr, desc *string) 
 	return err
 }
 
+// listAllComponents returns a minimal list of all components for use in dropdowns/comboboxes.
+func listAllComponents(db *sql.DB) ([]ComponentListItem, error) {
+	rows, err := db.Query(`
+		SELECT c.id, c.category_id, cat.name, c.mpn, c.manufacturer, c.description,
+		       c.quantity, c.min_quantity, c.location_id, sl.name, c.updated_at
+		FROM components c
+		JOIN categories cat ON c.category_id = cat.id
+		LEFT JOIN storage_locations sl ON c.location_id = sl.id
+		ORDER BY c.mpn NULLS LAST, c.manufacturer, c.description
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []ComponentListItem
+	for rows.Next() {
+		var item ComponentListItem
+		if err := rows.Scan(&item.ID, &item.CategoryID, &item.CategoryName,
+			&item.MPN, &item.Manufacturer, &item.Description,
+			&item.Quantity, &item.MinQuantity, &item.LocationID, &item.LocationName,
+			&item.UpdatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
 func createComponent(db sqlExecer, c *Component) (string, error) {
 	var id string
 	err := db.QueryRow(`
@@ -798,6 +827,295 @@ func insertAuditLog(db *sql.DB, tableName, recordID, action string, oldValues, n
 	if err != nil {
 		log.Printf("error inserting audit log: %v", err)
 	}
+}
+
+// --- Projects ---
+
+func listProjects(db *sql.DB, status string) ([]ProjectListItem, error) {
+	rows, err := db.Query(`
+		SELECT p.id, p.name, p.status, p.description,
+		       COUNT(DISTINCT bi.id) AS bom_item_count,
+		       COALESCE(BOOL_AND(c.quantity >= bi.quantity), true) AS buildable,
+		       COUNT(DISTINCT bi.id) FILTER (WHERE c.quantity < bi.quantity) AS shortage_count,
+		       (SELECT COUNT(*) FROM project_builds pb WHERE pb.project_id = p.id) AS build_count,
+		       p.updated_at
+		FROM projects p
+		LEFT JOIN project_bom_items bi ON bi.project_id = p.id
+		LEFT JOIN components c ON bi.component_id = c.id
+		WHERE ($1 = '' OR p.status = $1)
+		GROUP BY p.id
+		ORDER BY p.updated_at DESC
+	`, status)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []ProjectListItem
+	for rows.Next() {
+		var item ProjectListItem
+		if err := rows.Scan(&item.ID, &item.Name, &item.Status, &item.Description,
+			&item.BOMItemCount, &item.Buildable, &item.ShortageCount,
+			&item.BuildCount, &item.UpdatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
+func getProject(db *sql.DB, id string) (*Project, error) {
+	var p Project
+	err := db.QueryRow(`
+		SELECT id, name, status, description, created_at, updated_at
+		FROM projects WHERE id = $1
+	`, id).Scan(&p.ID, &p.Name, &p.Status, &p.Description, &p.CreatedAt, &p.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &p, nil
+}
+
+func createProject(db sqlExecer, name string, description *string, status string) (string, error) {
+	var id string
+	err := db.QueryRow(`
+		INSERT INTO projects (name, description, status)
+		VALUES ($1, $2, $3) RETURNING id
+	`, name, description, status).Scan(&id)
+	return id, err
+}
+
+func updateProject(db sqlExecer, id, name string, description *string, status string) error {
+	_, err := db.Exec(`
+		UPDATE projects SET name = $2, description = $3, status = $4, updated_at = now()
+		WHERE id = $1
+	`, id, name, description, status)
+	return err
+}
+
+func deleteProject(db *sql.DB, id string) error {
+	_, err := db.Exec(`DELETE FROM projects WHERE id = $1`, id)
+	return err
+}
+
+// --- BOM Items ---
+
+func listBOMItems(db *sql.DB, projectID string) ([]BOMItem, error) {
+	rows, err := db.Query(`
+		SELECT bi.id, bi.project_id, bi.component_id, bi.quantity, bi.sort_order,
+		       bi.reference, bi.notes,
+		       c.mpn, c.manufacturer, c.description, c.quantity AS component_quantity,
+		       cat.name AS category_name,
+		       sl.name AS location_name,
+		       (c.quantity >= bi.quantity) AS sufficient,
+		       GREATEST(0, bi.quantity - c.quantity) AS shortage
+		FROM project_bom_items bi
+		JOIN components c ON bi.component_id = c.id
+		JOIN categories cat ON c.category_id = cat.id
+		LEFT JOIN storage_locations sl ON c.location_id = sl.id
+		WHERE bi.project_id = $1
+		ORDER BY bi.sort_order, cat.name, c.mpn
+	`, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []BOMItem
+	for rows.Next() {
+		var item BOMItem
+		if err := rows.Scan(
+			&item.ID, &item.ProjectID, &item.ComponentID, &item.Quantity, &item.SortOrder,
+			&item.Reference, &item.Notes,
+			&item.ComponentMPN, &item.ComponentManufacturer, &item.ComponentDescription,
+			&item.ComponentQuantity, &item.ComponentCategoryName, &item.ComponentLocationName,
+			&item.Sufficient, &item.Shortage,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
+func getBOMItem(db sqlExecer, id string) (*BOMItem, error) {
+	var item BOMItem
+	err := db.QueryRow(`
+		SELECT bi.id, bi.project_id, bi.component_id, bi.quantity, bi.sort_order,
+		       bi.reference, bi.notes,
+		       c.mpn, c.manufacturer, c.description, c.quantity,
+		       cat.name, sl.name,
+		       (c.quantity >= bi.quantity), GREATEST(0, bi.quantity - c.quantity)
+		FROM project_bom_items bi
+		JOIN components c ON bi.component_id = c.id
+		JOIN categories cat ON c.category_id = cat.id
+		LEFT JOIN storage_locations sl ON c.location_id = sl.id
+		WHERE bi.id = $1
+	`, id).Scan(
+		&item.ID, &item.ProjectID, &item.ComponentID, &item.Quantity, &item.SortOrder,
+		&item.Reference, &item.Notes,
+		&item.ComponentMPN, &item.ComponentManufacturer, &item.ComponentDescription,
+		&item.ComponentQuantity, &item.ComponentCategoryName, &item.ComponentLocationName,
+		&item.Sufficient, &item.Shortage,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &item, nil
+}
+
+func createBOMItem(db sqlExecer, projectID, componentID string, quantity int, reference, notes *string) (string, error) {
+	var id string
+	err := db.QueryRow(`
+		INSERT INTO project_bom_items (project_id, component_id, quantity, reference, notes)
+		VALUES ($1, $2, $3, $4, $5) RETURNING id
+	`, projectID, componentID, quantity, reference, notes).Scan(&id)
+	return id, err
+}
+
+func updateBOMItem(db sqlExecer, id string, quantity int, reference, notes *string) error {
+	_, err := db.Exec(`
+		UPDATE project_bom_items SET quantity = $2, reference = $3, notes = $4
+		WHERE id = $1
+	`, id, quantity, reference, notes)
+	return err
+}
+
+func deleteBOMItem(db *sql.DB, id string) (string, error) {
+	var projectID string
+	err := db.QueryRow(`DELETE FROM project_bom_items WHERE id = $1 RETURNING project_id`, id).Scan(&projectID)
+	return projectID, err
+}
+
+// getMaxBuildable returns the maximum number of units buildable given current stock.
+// Returns 0 if the BOM is empty.
+func getMaxBuildable(db *sql.DB, projectID string) (int, error) {
+	var max int
+	err := db.QueryRow(`
+		SELECT COALESCE(MIN(FLOOR(c.quantity::numeric / bi.quantity)), 0)::int
+		FROM project_bom_items bi
+		JOIN components c ON bi.component_id = c.id
+		WHERE bi.project_id = $1
+	`, projectID).Scan(&max)
+	return max, err
+}
+
+// --- Builds ---
+
+func listProjectBuilds(db *sql.DB, projectID string) ([]ProjectBuild, error) {
+	rows, err := db.Query(`
+		SELECT id, project_id, multiplier, notes, built_at
+		FROM project_builds
+		WHERE project_id = $1
+		ORDER BY built_at DESC
+	`, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var builds []ProjectBuild
+	for rows.Next() {
+		var b ProjectBuild
+		if err := rows.Scan(&b.ID, &b.ProjectID, &b.Multiplier, &b.Notes, &b.BuiltAt); err != nil {
+			return nil, err
+		}
+		builds = append(builds, b)
+	}
+	return builds, rows.Err()
+}
+
+// executeProjectBuild runs a full build in a transaction: verifies stock, subtracts quantities,
+// records the build. Returns the created build on success or an error (which may be a
+// shortageError) if stock is insufficient.
+func executeProjectBuild(db *sql.DB, projectID string, multiplier int, notes *string) (*ProjectBuild, []BOMItem, error) {
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, nil, err
+	}
+	defer tx.Rollback()
+
+	// Lock component rows to prevent races
+	rows, err := tx.Query(`
+		SELECT bi.id, bi.project_id, bi.component_id, bi.quantity, bi.sort_order,
+		       bi.reference, bi.notes,
+		       c.mpn, c.manufacturer, c.description, c.quantity AS component_quantity,
+		       cat.name, sl.name,
+		       (c.quantity >= bi.quantity * $2) AS sufficient,
+		       GREATEST(0, (bi.quantity * $2) - c.quantity) AS shortage
+		FROM project_bom_items bi
+		JOIN components c ON bi.component_id = c.id
+		JOIN categories cat ON c.category_id = cat.id
+		LEFT JOIN storage_locations sl ON c.location_id = sl.id
+		WHERE bi.project_id = $1
+		ORDER BY bi.sort_order
+		FOR UPDATE OF c
+	`, projectID, multiplier)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var items []BOMItem
+	for rows.Next() {
+		var item BOMItem
+		if err := rows.Scan(
+			&item.ID, &item.ProjectID, &item.ComponentID, &item.Quantity, &item.SortOrder,
+			&item.Reference, &item.Notes,
+			&item.ComponentMPN, &item.ComponentManufacturer, &item.ComponentDescription,
+			&item.ComponentQuantity, &item.ComponentCategoryName, &item.ComponentLocationName,
+			&item.Sufficient, &item.Shortage,
+		); err != nil {
+			rows.Close()
+			return nil, nil, err
+		}
+		items = append(items, item)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, nil, err
+	}
+
+	// Check for shortages
+	var short []BOMItem
+	for _, item := range items {
+		if !item.Sufficient {
+			short = append(short, item)
+		}
+	}
+	if len(short) > 0 {
+		return nil, short, fmt.Errorf("insufficient stock")
+	}
+
+	// Subtract quantities
+	for _, item := range items {
+		if _, err := tx.Exec(`
+			UPDATE components SET quantity = quantity - $2, updated_at = now()
+			WHERE id = $1
+		`, item.ComponentID, item.Quantity*multiplier); err != nil {
+			return nil, nil, err
+		}
+	}
+
+	// Record build
+	var buildID string
+	if err := tx.QueryRow(`
+		INSERT INTO project_builds (project_id, multiplier, notes)
+		VALUES ($1, $2, $3) RETURNING id
+	`, projectID, multiplier, notes).Scan(&buildID); err != nil {
+		return nil, nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, nil, err
+	}
+
+	build := &ProjectBuild{
+		ID:         buildID,
+		ProjectID:  projectID,
+		Multiplier: multiplier,
+		Notes:      notes,
+	}
+	return build, nil, nil
 }
 
 func listAuditLog(db *sql.DB, limit, offset int) ([]AuditLogEntry, int, error) {

@@ -1,0 +1,37 @@
+{{if .Success}}
+<div class="alert" style="background:var(--green-light);border-color:var(--green);color:var(--text-primary)">
+    <strong>Build recorded!</strong>
+    Built {{.Multiplier}} unit{{if ne .Multiplier 1}}s{{end}}. Component quantities have been updated.
+    <div style="margin-top:0.5rem">
+        <a href="" onclick="location.reload();return false;" class="link">Refresh page</a> to see updated stock levels.
+    </div>
+</div>
+{{else}}
+<div class="alert alert-red">
+    <strong>Cannot build &mdash; insufficient stock:</strong>
+    <table class="table table-sm" style="margin-top:0.75rem">
+        <thead>
+            <tr>
+                <th>Component</th>
+                <th class="td-center">Required</th>
+                <th class="td-center">In Stock</th>
+                <th class="td-center">Short by</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .ShortItems}}
+            <tr>
+                <td>
+                    <a href="/components/{{.ComponentID}}" class="link">
+                        {{if .ComponentMPN}}{{deref .ComponentMPN}}{{else}}[no MPN]{{end}}
+                    </a>
+                </td>
+                <td class="td-center font-mono">{{mul .Quantity $.Multiplier}}</td>
+                <td class="td-center font-mono">{{.ComponentQuantity}}</td>
+                <td class="td-center"><span class="badge badge-red">{{.Shortage}}</span></td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</div>
+{{end}}
