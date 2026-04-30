@@ -19,12 +19,15 @@
         <tbody>
             {{if not .Entries}}
             <tr>
-                <td colspan="6" class="table-empty">No audit log entries yet.</td>
+                <td colspan="6" class="table-empty">
+                    No audit log entries yet.
+                </td>
             </tr>
-            {{end}}
-            {{range .Entries}}
-            <tr class="table-row-hover" style="vertical-align:top">
-                <td class="td-muted whitespace-nowrap">{{.CreatedAt.Format "2006-01-02 15:04:05"}}</td>
+            {{end}} {{range .Entries}}
+            <tr class="table-row-hover" style="vertical-align: top">
+                <td class="td-muted whitespace-nowrap">
+                    {{.CreatedAt.Format "2006-01-02 15:04:05"}}
+                </td>
                 <td>
                     {{if eq .Action "insert"}}
                     <span class="badge badge-green">insert</span>
@@ -34,6 +37,8 @@
                     <span class="badge badge-red">delete</span>
                     {{else if eq .Action "quantity"}}
                     <span class="badge badge-yellow">quantity</span>
+                    {{else if eq .Action "import"}}
+                    <span class="badge badge-purple">import</span>
                     {{else}}
                     <span class="td-muted">{{.Action}}</span>
                     {{end}}
@@ -44,12 +49,12 @@
                         <code class="code-tag">{{slice .RecordID 0 8}}…</code>
                     </a>
                 </td>
-                <td style="max-width:20rem">
+                <td style="max-width: 20rem">
                     {{if .OldValues}}
                     <pre class="pre-block">{{deref .OldValues}}</pre>
                     {{else}}<span class="text-subtle">—</span>{{end}}
                 </td>
-                <td style="max-width:20rem">
+                <td style="max-width: 20rem">
                     {{if .NewValues}}
                     <pre class="pre-block">{{deref .NewValues}}</pre>
                     {{else}}<span class="text-subtle">—</span>{{end}}
@@ -65,12 +70,18 @@
     <div class="pagination-info">Page {{.Page}} of {{.TotalPages}}</div>
     <div class="pagination-btns">
         {{if .HasPrev}}
-        <a href="/admin/audit?page={{sub .Page 1}}" class="btn btn-secondary btn-sm">Previous</a>
-        {{end}}
-        {{if .HasNext}}
-        <a href="/admin/audit?page={{add .Page 1}}" class="btn btn-secondary btn-sm">Next</a>
+        <a
+            href="/admin/audit?page={{sub .Page 1}}"
+            class="btn btn-secondary btn-sm"
+            >Previous</a
+        >
+        {{end}} {{if .HasNext}}
+        <a
+            href="/admin/audit?page={{add .Page 1}}"
+            class="btn btn-secondary btn-sm"
+            >Next</a
+        >
         {{end}}
     </div>
 </div>
-{{end}}
-{{end}}
+{{end}} {{end}}

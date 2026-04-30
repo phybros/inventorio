@@ -29,6 +29,45 @@
     </script>
     <script>
     (function() {
+        function getCookie(name) {
+            var prefix = name + '=';
+            var cookies = document.cookie ? document.cookie.split(';') : [];
+            for (var i = 0; i < cookies.length; i++) {
+                var cookie = cookies[i].trim();
+                if (cookie.indexOf(prefix) === 0) {
+                    return decodeURIComponent(cookie.substring(prefix.length));
+                }
+            }
+            return '';
+        }
+
+        function getCSRFToken() {
+            return getCookie('inventorio_csrf');
+        }
+
+        function ensureCSRFInput(form) {
+            if (!form) return;
+            var method = (form.getAttribute('method') || 'GET').toUpperCase();
+            if (method === 'GET') return;
+            var token = getCSRFToken();
+            if (!token) return;
+
+            var input = form.querySelector('input[name="_csrf"]');
+            if (!input) {
+                input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = '_csrf';
+                form.appendChild(input);
+            }
+            input.value = token;
+        }
+
+        function initCSRF(root) {
+            (root || document).querySelectorAll('form').forEach(function(form) {
+                ensureCSRFInput(form);
+            });
+        }
+
         function initCombobox(sel) {
             if (sel._combobox) return;
 
@@ -163,7 +202,10 @@
                 creating = true;
                 fetch(createUrl, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRF-Token': getCSRFToken()
+                    },
                     body: 'name=' + encodeURIComponent(name)
                 })
                 .then(function(r) { return r.json(); })
@@ -258,10 +300,21 @@
         }
 
         document.addEventListener('DOMContentLoaded', function() {
+            initCSRF();
             initAllComboboxes();
-            document.addEventListener('htmx:afterSettle', function(e) { initAllComboboxes(e.detail.elt); });
+            document.addEventListener('submit', function(e) { ensureCSRFInput(e.target); });
+            document.addEventListener('htmx:configRequest', function(e) {
+                var token = getCSRFToken();
+                if (token) e.detail.headers['X-CSRF-Token'] = token;
+            });
+            document.addEventListener('htmx:afterSettle', function(e) {
+                initCSRF(e.detail.elt);
+                initAllComboboxes(e.detail.elt);
+            });
         });
 
+        window.getCSRFToken = getCSRFToken;
+        window.initCSRF = initCSRF;
         window.initCombobox = initCombobox;
         window.initAllComboboxes = initAllComboboxes;
     })();

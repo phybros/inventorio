@@ -141,7 +141,7 @@ func main() {
 	mux.HandleFunc("POST /import/preview", app.HandleImportPreview)
 	mux.HandleFunc("POST /import/commit", app.HandleImportCommit)
 
-	handler := methodOverride(mux)
+	handler := csrfProtection(methodOverride(mux))
 
 	log.Printf("listening on %s", addr)
 	if err := http.ListenAndServe(addr, handler); err != nil {
