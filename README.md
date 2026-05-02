@@ -38,3 +38,12 @@ docker run --rm -p 8080:8080 \
   -e DATABASE_URL='postgres://inv:inv@host.docker.internal:5432/inventory?sslmode=disable' \
   inventorio
 ```
+
+## AI Usage Disclaimer
+
+Development of this app uses AI for coding assistance.
+
+## License
+
+MIT
+
