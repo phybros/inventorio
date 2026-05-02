@@ -59,14 +59,14 @@ type EnumValue struct {
 }
 
 type StorageLocation struct {
-	ID           string
-	Name         string
-	ParentID     *string
-	ParentName   *string
-	Description  *string
-	Barcode      string
+	ID             string
+	Name           string
+	ParentID       *string
+	ParentName     *string
+	Description    *string
+	Barcode        string
 	ComponentCount int
-	CreatedAt    time.Time
+	CreatedAt      time.Time
 }
 
 type Component struct {
@@ -117,10 +117,10 @@ type ComponentListItem struct {
 }
 
 type DashboardStats struct {
-	TotalComponents int
+	TotalComponents  int
 	UniqueCategories int
-	TotalQuantity   int
-	LowStockCount   int
+	TotalQuantity    int
+	LowStockCount    int
 }
 
 type LowStockItem struct {
@@ -134,13 +134,13 @@ type LowStockItem struct {
 }
 
 type AttrFilter struct {
-	AttrDefID   string
-	DataType    string
-	MinValue    *float64
-	MaxValue    *float64
-	EnumValues  []string // selected enum value IDs
-	TextSearch  string
-	BoolValue   *bool
+	AttrDefID  string
+	DataType   string
+	MinValue   *float64
+	MaxValue   *float64
+	EnumValues []string // selected enum value IDs
+	TextSearch string
+	BoolValue  *bool
 }
 
 type Project struct {
@@ -223,11 +223,13 @@ type mergeListPage struct {
 }
 
 type AuditLogEntry struct {
-	ID        string
-	TableName string
-	RecordID  string
-	Action    string
-	OldValues *string // JSON string
-	NewValues *string // JSON string
-	CreatedAt time.Time
+	ID          string
+	TableName   string
+	RecordID    string
+	Action      string
+	OldValues   *string // JSON string
+	NewValues   *string // JSON string
+	ActorUserID *string
+	ActorEmail  *string
+	CreatedAt   time.Time
 }

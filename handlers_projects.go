@@ -23,7 +23,7 @@ func (app *App) HandleProjectList(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to load projects", http.StatusInternalServerError)
 		return
 	}
-	app.renderer.RenderPage(w, "projects/list", projectListData{
+	app.renderer.RenderPage(w, r, "projects/list", projectListData{
 		Projects: projects,
 		Status:   status,
 	})
@@ -38,7 +38,7 @@ type projectFormData struct {
 }
 
 func (app *App) HandleProjectNew(w http.ResponseWriter, r *http.Request) {
-	app.renderer.RenderPage(w, "projects/form", projectFormData{IsNew: true})
+	app.renderer.RenderPage(w, r, "projects/form", projectFormData{IsNew: true})
 }
 
 func (app *App) HandleProjectCreate(w http.ResponseWriter, r *http.Request) {
@@ -48,7 +48,7 @@ func (app *App) HandleProjectCreate(w http.ResponseWriter, r *http.Request) {
 	}
 	name := strings.TrimSpace(r.FormValue("name"))
 	if name == "" {
-		app.renderer.RenderPage(w, "projects/form", projectFormData{
+		app.renderer.RenderPage(w, r, "projects/form", projectFormData{
 			IsNew:  true,
 			Errors: map[string]string{"name": "Name is required"},
 			Project: &Project{
@@ -71,7 +71,7 @@ func (app *App) HandleProjectCreate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to create project", http.StatusInternalServerError)
 		return
 	}
-	insertAuditLog(app.db, "projects", id, "insert", nil, map[string]string{"name": name, "status": status})
+	insertAuditLog(r, app.db, "projects", id, "insert", nil, map[string]string{"name": name, "status": status})
 	http.Redirect(w, r, "/projects/"+id, http.StatusSeeOther)
 }
 
@@ -82,7 +82,7 @@ func (app *App) HandleProjectEdit(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "project not found", http.StatusNotFound)
 		return
 	}
-	app.renderer.RenderPage(w, "projects/form", projectFormData{Project: project, IsNew: false})
+	app.renderer.RenderPage(w, r, "projects/form", projectFormData{Project: project, IsNew: false})
 }
 
 func (app *App) HandleProjectUpdate(w http.ResponseWriter, r *http.Request) {
@@ -94,7 +94,7 @@ func (app *App) HandleProjectUpdate(w http.ResponseWriter, r *http.Request) {
 	name := strings.TrimSpace(r.FormValue("name"))
 	if name == "" {
 		project, _ := getProject(app.db, id)
-		app.renderer.RenderPage(w, "projects/form", projectFormData{
+		app.renderer.RenderPage(w, r, "projects/form", projectFormData{
 			Project: project,
 			IsNew:   false,
 			Errors:  map[string]string{"name": "Name is required"},
@@ -113,7 +113,7 @@ func (app *App) HandleProjectUpdate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to update project", http.StatusInternalServerError)
 		return
 	}
-	insertAuditLog(app.db, "projects", id, "update", nil, map[string]string{"name": name, "status": status})
+	insertAuditLog(r, app.db, "projects", id, "update", nil, map[string]string{"name": name, "status": status})
 	http.Redirect(w, r, "/projects/"+id, http.StatusSeeOther)
 }
 
@@ -124,7 +124,7 @@ func (app *App) HandleProjectDelete(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to delete project", http.StatusInternalServerError)
 		return
 	}
-	insertAuditLog(app.db, "projects", id, "delete", nil, nil)
+	insertAuditLog(r, app.db, "projects", id, "delete", nil, nil)
 	w.Header().Set("HX-Redirect", "/projects")
 	w.WriteHeader(http.StatusOK)
 }
@@ -152,7 +152,7 @@ func (app *App) HandleProjectDuplicate(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	insertAuditLog(app.db, "projects", newID, "insert", nil, map[string]string{"name": copyName, "duplicated_from": id})
+	insertAuditLog(r, app.db, "projects", newID, "insert", nil, map[string]string{"name": copyName, "duplicated_from": id})
 	http.Redirect(w, r, "/projects/"+newID, http.StatusSeeOther)
 }
 
@@ -217,7 +217,7 @@ func (app *App) HandleProjectDetail(w http.ResponseWriter, r *http.Request) {
 		buildable = false
 	}
 
-	app.renderer.RenderPage(w, "projects/detail", projectDetailData{
+	app.renderer.RenderPage(w, r, "projects/detail", projectDetailData{
 		Project:       project,
 		BOMItems:      items,
 		Builds:        builds,
@@ -399,7 +399,7 @@ func (app *App) HandleProjectBuild(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	insertAuditLog(app.db, "project_builds", build.ID, "insert", nil,
+	insertAuditLog(r, app.db, "project_builds", build.ID, "insert", nil,
 		map[string]any{"project_id": projectID, "multiplier": multiplier})
 
 	app.renderer.RenderFragment(w, "projects/_build_result", buildResultData{
@@ -460,7 +460,7 @@ func (app *App) HandleComponentQuickCreate(w http.ResponseWriter, r *http.Reques
 		http.Error(w, "failed to create component", http.StatusInternalServerError)
 		return
 	}
-	insertAuditLog(app.db, "components", id, "insert", nil, map[string]string{"mpn": mpn, "note": "placeholder"})
+	insertAuditLog(r, app.db, "components", id, "insert", nil, map[string]string{"mpn": mpn, "note": "placeholder"})
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"id": id, "name": mpn + " (placeholder)"})

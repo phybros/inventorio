@@ -64,6 +64,12 @@ type Renderer struct {
 	fragments map[string]*template.Template
 }
 
+type PageData struct {
+	CurrentUser *CurrentUser
+	AuthMode    string
+	Data        any
+}
+
 func NewRenderer() *Renderer {
 	r := &Renderer{
 		pages:     make(map[string]*template.Template),
@@ -112,14 +118,30 @@ func NewRenderer() *Renderer {
 	return r
 }
 
-func (r *Renderer) RenderPage(w http.ResponseWriter, name string, data any) {
+func (r *Renderer) RenderPage(w http.ResponseWriter, req *http.Request, name string, data any) {
 	t, ok := r.pages[name]
 	if !ok {
 		http.Error(w, fmt.Sprintf("template %q not found", name), http.StatusInternalServerError)
 		return
 	}
+	authMode := authModeDisabled
+	if user := currentUser(req); user != nil && user.Provider == authModeProxy {
+		authMode = authModeProxy
+	} else if currentUser(req) != nil {
+		authMode = authModeOAuth
+	}
+	if req.Context().Value(authModeContextKey{}) != nil {
+		if mode, ok := req.Context().Value(authModeContextKey{}).(string); ok {
+			authMode = mode
+		}
+	}
+	page := PageData{
+		CurrentUser: currentUser(req),
+		AuthMode:    authMode,
+		Data:        data,
+	}
 	var buf bytes.Buffer
-	if err := t.ExecuteTemplate(&buf, "layout", data); err != nil {
+	if err := t.ExecuteTemplate(&buf, "layout", page); err != nil {
 		log.Printf("error rendering page %q: %v", name, err)
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return

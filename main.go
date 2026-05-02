@@ -26,9 +26,15 @@ var staticFS embed.FS
 type App struct {
 	db       *sql.DB
 	renderer *Renderer
+	auth     *AuthConfig
 }
 
 func main() {
+	authConfig, err := LoadAuthConfigFromEnv()
+	if err != nil {
+		log.Fatalf("invalid auth configuration: %v", err)
+	}
+
 	dbURL := databaseURLFromEnv()
 	addr := os.Getenv("LISTEN_ADDR")
 	if addr == "" {
@@ -53,6 +59,7 @@ func main() {
 	app := &App{
 		db:       db,
 		renderer: NewRenderer(),
+		auth:     authConfig,
 	}
 
 	mux := http.NewServeMux()
@@ -63,6 +70,12 @@ func main() {
 		log.Fatalf("failed to create static sub-FS: %v", err)
 	}
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticSub))))
+
+	// Authentication
+	mux.HandleFunc("GET /login", app.HandleLogin)
+	mux.HandleFunc("GET /auth/{provider}/start", app.HandleOAuthStart)
+	mux.HandleFunc("GET /auth/{provider}/callback", app.HandleOAuthCallback)
+	mux.HandleFunc("POST /logout", app.HandleLogout)
 
 	// Dashboard
 	mux.HandleFunc("GET /{$}", app.HandleIndex)
@@ -139,7 +152,7 @@ func main() {
 	mux.HandleFunc("POST /import/preview", app.HandleImportPreview)
 	mux.HandleFunc("POST /import/commit", app.HandleImportCommit)
 
-	handler := csrfProtection(methodOverride(mux))
+	handler := app.authMiddleware(csrfProtection(methodOverride(mux)))
 
 	log.Printf("listening on %s", addr)
 	if err := http.ListenAndServe(addr, handler); err != nil {

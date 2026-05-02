@@ -60,6 +60,78 @@ DB_PASSWORD=inv
 DB_SSLMODE=disable
 ```
 
+## Authentication
+
+Inventorio defaults to no authentication for compatibility with existing
+self-hosted installs:
+
+```sh
+INVENTORIO_AUTH_MODE=disabled
+```
+
+Do not expose a disabled-mode deployment directly to the internet. For
+internet-facing deployments, use OAuth or a trusted authenticating reverse proxy.
+
+### OAuth
+
+OAuth mode supports GitHub and Google. At least one provider must be configured,
+and authenticated users must be constrained with an allowlist unless you
+explicitly opt into allowing everyone.
+
+```sh
+INVENTORIO_AUTH_MODE=oauth
+INVENTORIO_PUBLIC_URL=https://inventory.example.com
+INVENTORIO_SESSION_SECRET=replace-with-a-long-random-secret
+
+INVENTORIO_GITHUB_CLIENT_ID=...
+INVENTORIO_GITHUB_CLIENT_SECRET=...
+
+INVENTORIO_GOOGLE_CLIENT_ID=...
+INVENTORIO_GOOGLE_CLIENT_SECRET=...
+
+INVENTORIO_ALLOWED_EMAILS=alice@example.com,bob@example.com
+INVENTORIO_ALLOWED_DOMAINS=example.org
+```
+
+Provider entries are optional individually, but each configured provider needs
+both a client ID and client secret. GitHub logins require a primary verified
+email. Google logins require a verified Google email.
+
+### Reverse Proxy
+
+Proxy mode trusts a reverse proxy to authenticate the user and pass:
+
+```http
+X-Forwarded-User: authenticated-user@example.com
+```
+
+Example:
+
+```sh
+INVENTORIO_AUTH_MODE=proxy
+INVENTORIO_ALLOWED_DOMAINS=example.com
+```
+
+Proxy mode is only safe when Inventorio is not directly reachable by clients.
+Configure the proxy to strip any incoming client-supplied `X-Forwarded-User`
+header before setting the trusted value.
+
+### Auth Options
+
+```sh
+INVENTORIO_SESSION_COOKIE_NAME=inventorio_session
+INVENTORIO_COOKIE_SECURE=auto
+```
+
+`INVENTORIO_COOKIE_SECURE` accepts `auto`, `true`, or `false`. `auto` uses secure
+cookies for HTTPS requests, `X-Forwarded-Proto: https`, or an HTTPS
+`INVENTORIO_PUBLIC_URL`.
+
+Allowlist matching is case-insensitive. `INVENTORIO_AUTH_ALLOW_ALL_USERS=true`
+allows any successfully authenticated OAuth or proxy user and should be avoided
+for internet-facing deployments. Password login is not included in Inventorio
+1.0.
+
 ## AI Usage Disclaimer
 
 AI coding assistance has been used in the creation of this app.

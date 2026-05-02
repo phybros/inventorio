@@ -354,12 +354,20 @@
                                   d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
                         </svg>
                     </button>
+                    {{if .CurrentUser}}
+                        <span class="nav-user" title="{{.CurrentUser.Email}}">{{if .CurrentUser.DisplayName}}{{.CurrentUser.DisplayName}}{{else}}{{.CurrentUser.Email}}{{end}}</span>
+                        {{if eq .AuthMode "oauth"}}
+                            <form method="POST" action="/logout">
+                                <button type="submit" class="btn btn-secondary btn-sm">Logout</button>
+                            </form>
+                        {{end}}
+                    {{end}}
                 </div>
             </div>
         </div>
     </nav>
     <main class="page-container page-main">
-        {{block "content" .}}{{end}}
+        {{block "content" .Data}}{{end}}
     </main>
 </body>
 </html>

@@ -1,0 +1,18 @@
+{{define "content"}}
+<div class="auth-panel">
+    <h1 class="page-title">Sign in</h1>
+
+    {{if .Message}}
+        <p class="auth-message">{{.Message}}</p>
+    {{else}}
+        <div class="auth-actions">
+            {{if .GitHubConfigured}}
+                <a class="btn btn-primary" href="/auth/github/start?next={{urlquery .Next}}">Sign in with GitHub</a>
+            {{end}}
+            {{if .GoogleConfigured}}
+                <a class="btn btn-primary" href="/auth/google/start?next={{urlquery .Next}}">Sign in with Google</a>
+            {{end}}
+        </div>
+    {{end}}
+</div>
+{{end}}

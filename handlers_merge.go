@@ -53,7 +53,7 @@ func (app *App) HandleMergeList(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to load duplicates", http.StatusInternalServerError)
 		return
 	}
-	app.renderer.RenderPage(w, "components/merge_list", mergeListPage{Groups: groups})
+	app.renderer.RenderPage(w, r, "components/merge_list", mergeListPage{Groups: groups})
 }
 
 // HandleMergePreview renders the side-by-side merge UI for two specific components.
@@ -178,7 +178,7 @@ func (app *App) HandleMergePreview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	app.renderer.RenderPage(w, "components/merge", mergePage{
+	app.renderer.RenderPage(w, r, "components/merge", mergePage{
 		CompA:      compA,
 		CompB:      compB,
 		AttrRows:   attrRows,
@@ -284,7 +284,7 @@ func (app *App) HandleMergeCommit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	insertAuditLog(app.db, "components", survivorID, "merge",
+	insertAuditLog(r, app.db, "components", survivorID, "merge",
 		map[string]string{"merged_from": loserID}, updated)
 
 	http.Redirect(w, r, "/components/"+survivorID, http.StatusSeeOther)
