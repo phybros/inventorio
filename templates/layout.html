@@ -326,24 +326,28 @@
             <div class="nav-inner">
                 <div class="nav-links">
                     <a href="/" class="nav-brand">Inventorio</a>
-                    <a href="/components" class="nav-link">Components</a>
-                    <a href="/projects" class="nav-link">Projects</a>
-                    <a href="/admin/categories" class="nav-link">Categories</a>
-                    <a href="/admin/enums" class="nav-link">Enum Groups</a>
-                    <a href="/admin/locations" class="nav-link">Locations</a>
-                    <a href="/admin/audit" class="nav-link">Audit Log</a>
-                    <a href="/import" class="nav-link">Import</a>
-                    <a href="/components/merge" class="nav-link">Duplicates</a>
+                    {{if or .CurrentUser (eq .AuthMode "disabled")}}
+                        <a href="/components" class="nav-link">Components</a>
+                        <a href="/projects" class="nav-link">Projects</a>
+                        <a href="/admin/categories" class="nav-link">Categories</a>
+                        <a href="/admin/enums" class="nav-link">Enum Groups</a>
+                        <a href="/admin/locations" class="nav-link">Locations</a>
+                        <a href="/admin/audit" class="nav-link">Audit Log</a>
+                        <a href="/import" class="nav-link">Import</a>
+                        <a href="/components/merge" class="nav-link">Duplicates</a>
+                    {{end}}
                 </div>
                 <div class="nav-actions">
-                    <form method="GET" action="/components">
-                        <div class="nav-search-wrap">
-                            <svg class="nav-search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                            </svg>
-                            <input type="text" name="q" placeholder="Search parts…" class="nav-search">
-                        </div>
-                    </form>
+                    {{if or .CurrentUser (eq .AuthMode "disabled")}}
+                        <form method="GET" action="/components">
+                            <div class="nav-search-wrap">
+                                <svg class="nav-search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                </svg>
+                                <input type="text" name="q" placeholder="Search parts…" class="nav-search">
+                            </div>
+                        </form>
+                    {{end}}
                     <button onclick="toggleTheme()" class="btn-icon" title="Toggle dark mode">
                         <svg class="icon-sun" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

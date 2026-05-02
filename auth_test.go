@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -155,5 +156,27 @@ func TestRendererRendersPageDataWrapper(t *testing.T) {
 
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d; body=%s", rr.Code, http.StatusOK, rr.Body.String())
+	}
+}
+
+func TestRendererHidesProtectedNavWhenLoggedOutWithAuthEnabled(t *testing.T) {
+	renderer := NewRenderer()
+	req := httptest.NewRequest(http.MethodGet, "/login", nil)
+	req = withAuthMode(req, authModeOAuth)
+	rr := httptest.NewRecorder()
+
+	renderer.RenderPage(rr, req, "auth/login", loginPageData{
+		Next:             "/components",
+		GitHubConfigured: true,
+	})
+
+	body := rr.Body.String()
+	for _, hidden := range []string{`href="/components" class="nav-link"`, `name="q"`, `Audit Log`} {
+		if strings.Contains(body, hidden) {
+			t.Fatalf("logged-out auth navbar contains %q", hidden)
+		}
+	}
+	if !strings.Contains(body, `title="Toggle dark mode"`) {
+		t.Fatal("theme switcher was not rendered")
 	}
 }
