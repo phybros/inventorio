@@ -1,4 +1,6 @@
-# Inventorio
+# 📦 inventorio
+
+Inventorio is an electronic component inventory management app designed for makers and their out-of-control component collections.
 
 ## Configuration
 
