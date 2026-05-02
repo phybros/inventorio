@@ -1,0 +1,17 @@
+.git
+.github
+.claude
+.pgdata
+
+inventorio
+
+*.csv
+*.xls
+*.xlsx
+
+.env
+.env.*
+!.env.example
+
+.DS_Store
+Thumbs.db

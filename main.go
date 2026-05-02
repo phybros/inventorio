@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -27,11 +29,7 @@ type App struct {
 }
 
 func main() {
-	dbURL := os.Getenv("DATABASE_URL")
-	if dbURL == "" {
-		dbURL = "postgres://inv:inv@localhost:5432/inventory?sslmode=disable"
-	}
-
+	dbURL := databaseURLFromEnv()
 	addr := os.Getenv("LISTEN_ADDR")
 	if addr == "" {
 		addr = ":8080"
@@ -147,6 +145,38 @@ func main() {
 	if err := http.ListenAndServe(addr, handler); err != nil {
 		log.Fatalf("server error: %v", err)
 	}
+}
+
+func databaseURLFromEnv() string {
+	if dbURL := os.Getenv("DATABASE_URL"); dbURL != "" {
+		return dbURL
+	}
+
+	host := envOrDefault("DB_HOST", "localhost")
+	port := envOrDefault("DB_PORT", "5432")
+	name := envOrDefault("DB_NAME", "inventory")
+	user := envOrDefault("DB_USER", "inv")
+	password := envOrDefault("DB_PASSWORD", "inv")
+	sslMode := envOrDefault("DB_SSLMODE", "disable")
+
+	u := &url.URL{
+		Scheme: "postgres",
+		User:   url.UserPassword(user, password),
+		Host:   net.JoinHostPort(host, port),
+		Path:   name,
+	}
+	q := u.Query()
+	q.Set("sslmode", sslMode)
+	u.RawQuery = q.Encode()
+
+	return u.String()
+}
+
+func envOrDefault(key, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return fallback
 }
 
 // methodOverride allows HTML forms to use PUT/DELETE via a _method field.
