@@ -14,7 +14,7 @@ func (app *App) HandleEnumList(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to load enum groups", http.StatusInternalServerError)
 		return
 	}
-	app.renderer.RenderPage(w, "enums/list", groups)
+	app.renderer.RenderPage(w, r, "enums/list", groups)
 }
 
 func (app *App) HandleEnumGroupCreate(w http.ResponseWriter, r *http.Request) {

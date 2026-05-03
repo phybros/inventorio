@@ -36,7 +36,7 @@ func (app *App) HandleIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	app.renderer.RenderPage(w, "index", dashboardData{
+	app.renderer.RenderPage(w, r, "index", dashboardData{
 		Stats:    stats,
 		LowStock: lowStock,
 		Recent:   recent,
@@ -50,7 +50,7 @@ func (app *App) HandleCategoryList(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to load categories", http.StatusInternalServerError)
 		return
 	}
-	app.renderer.RenderPage(w, "categories/list", categories)
+	app.renderer.RenderPage(w, r, "categories/list", categories)
 }
 
 func (app *App) HandleCategoryCreate(w http.ResponseWriter, r *http.Request) {
@@ -130,7 +130,7 @@ func (app *App) HandleCategoryEdit(w http.ResponseWriter, r *http.Request) {
 		Attributes: attrs,
 		EnumGroups: enumGroups,
 	}
-	app.renderer.RenderPage(w, "categories/form", data)
+	app.renderer.RenderPage(w, r, "categories/form", data)
 }
 
 func (app *App) HandleCategoryUpdate(w http.ResponseWriter, r *http.Request) {

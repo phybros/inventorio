@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"strings"
 )
 
@@ -803,7 +804,7 @@ func deleteStorageLocation(db *sql.DB, id string) error {
 
 // --- Audit Log ---
 
-func insertAuditLog(db *sql.DB, tableName, recordID, action string, oldValues, newValues any) {
+func insertAuditLog(r *http.Request, db *sql.DB, tableName, recordID, action string, oldValues, newValues any) {
 	var oldJSON, newJSON *string
 	if oldValues != nil {
 		b, err := json.Marshal(oldValues)
@@ -819,11 +820,16 @@ func insertAuditLog(db *sql.DB, tableName, recordID, action string, oldValues, n
 			newJSON = &s
 		}
 	}
+	var actorUserID, actorEmail *string
+	if user := currentUser(r); user != nil {
+		actorUserID = &user.ID
+		actorEmail = &user.Email
+	}
 
 	_, err := db.Exec(`
-		INSERT INTO audit_log (table_name, record_id, action, old_values, new_values)
-		VALUES ($1, $2, $3, $4, $5)
-	`, tableName, recordID, action, oldJSON, newJSON)
+		INSERT INTO audit_log (table_name, record_id, action, old_values, new_values, actor_user_id, actor_email)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`, tableName, recordID, action, oldJSON, newJSON, actorUserID, actorEmail)
 	if err != nil {
 		log.Printf("error inserting audit log: %v", err)
 	}
@@ -1125,7 +1131,7 @@ func listAuditLog(db *sql.DB, limit, offset int) ([]AuditLogEntry, int, error) {
 	}
 
 	rows, err := db.Query(`
-		SELECT id, table_name, record_id, action, old_values, new_values, created_at
+		SELECT id, table_name, record_id, action, old_values, new_values, actor_user_id, actor_email, created_at
 		FROM audit_log
 		ORDER BY created_at DESC
 		LIMIT $1 OFFSET $2
@@ -1139,7 +1145,7 @@ func listAuditLog(db *sql.DB, limit, offset int) ([]AuditLogEntry, int, error) {
 	for rows.Next() {
 		var e AuditLogEntry
 		if err := rows.Scan(&e.ID, &e.TableName, &e.RecordID, &e.Action,
-			&e.OldValues, &e.NewValues, &e.CreatedAt); err != nil {
+			&e.OldValues, &e.NewValues, &e.ActorUserID, &e.ActorEmail, &e.CreatedAt); err != nil {
 			return nil, 0, err
 		}
 		entries = append(entries, e)

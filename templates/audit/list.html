@@ -10,6 +10,7 @@
             <tr>
                 <th>Time</th>
                 <th>Action</th>
+                <th>Actor</th>
                 <th>Table</th>
                 <th>Record</th>
                 <th>Old Values</th>
@@ -19,7 +20,7 @@
         <tbody>
             {{if not .Entries}}
             <tr>
-                <td colspan="6" class="table-empty">
+                <td colspan="7" class="table-empty">
                     No audit log entries yet.
                 </td>
             </tr>
@@ -43,6 +44,7 @@
                     <span class="td-muted">{{.Action}}</span>
                     {{end}}
                 </td>
+                <td>{{if .ActorEmail}}{{deref .ActorEmail}}{{else}}<span class="text-subtle">—</span>{{end}}</td>
                 <td>{{.TableName}}</td>
                 <td>
                     <a href="/components/{{.RecordID}}" class="link">

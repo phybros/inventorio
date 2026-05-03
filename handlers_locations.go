@@ -18,7 +18,7 @@ func (app *App) HandleLocationList(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to load locations", http.StatusInternalServerError)
 		return
 	}
-	app.renderer.RenderPage(w, "locations/list", locationListData{Locations: locations})
+	app.renderer.RenderPage(w, r, "locations/list", locationListData{Locations: locations})
 }
 
 func (app *App) HandleLocationCreate(w http.ResponseWriter, r *http.Request) {

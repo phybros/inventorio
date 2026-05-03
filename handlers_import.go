@@ -57,7 +57,7 @@ func (app *App) HandleImportPage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to load categories", http.StatusInternalServerError)
 		return
 	}
-	app.renderer.RenderPage(w, "import/page", importPageData{Categories: categories})
+	app.renderer.RenderPage(w, r, "import/page", importPageData{Categories: categories})
 }
 
 func (app *App) HandleImportPreview(w http.ResponseWriter, r *http.Request) {
@@ -198,7 +198,7 @@ func (app *App) HandleImportCommit(w http.ResponseWriter, r *http.Request) {
 				skipped++
 				continue
 			}
-			insertAuditLog(app.db, "components", existingID, "import-merge", nil,
+			insertAuditLog(r, app.db, "components", existingID, "import-merge", nil,
 				map[string]any{"qty_added": qty, "mpn": mpn})
 			updated++
 			continue
@@ -228,11 +228,11 @@ func (app *App) HandleImportCommit(w http.ResponseWriter, r *http.Request) {
 			skipped++
 			continue
 		}
-		insertAuditLog(app.db, "components", id, "import", nil, comp)
+		insertAuditLog(r, app.db, "components", id, "import", nil, comp)
 		imported++
 	}
 
-	app.renderer.RenderPage(w, "import/result", importResultData{
+	app.renderer.RenderPage(w, r, "import/result", importResultData{
 		Imported: imported,
 		Updated:  updated,
 		Skipped:  skipped,

@@ -123,7 +123,7 @@ func (app *App) HandleComponentList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	app.renderer.RenderPage(w, "components/list", componentListData{
+	app.renderer.RenderPage(w, r, "components/list", componentListData{
 		Components:  components,
 		Categories:  categories,
 		CategoryID:  categoryID,
@@ -162,7 +162,7 @@ func (app *App) HandleComponentDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	app.renderer.RenderPage(w, "components/detail", componentDetailData{
+	app.renderer.RenderPage(w, r, "components/detail", componentDetailData{
 		Component:  comp,
 		Attributes: attrs,
 		Components: allComps,
@@ -218,7 +218,7 @@ func (app *App) HandleComponentNew(w http.ResponseWriter, r *http.Request) {
 		data.Component = &Component{CategoryID: categoryID}
 	}
 
-	app.renderer.RenderPage(w, "components/form", data)
+	app.renderer.RenderPage(w, r, "components/form", data)
 }
 
 // renderNewComponentForm re-renders the new component form with the given errors
@@ -269,7 +269,7 @@ func (app *App) renderNewComponentForm(w http.ResponseWriter, r *http.Request, e
 	}
 
 	w.WriteHeader(http.StatusUnprocessableEntity)
-	app.renderer.RenderPage(w, "components/form", componentFormData{
+	app.renderer.RenderPage(w, r, "components/form", componentFormData{
 		Component:  comp,
 		Categories: categories,
 		Locations:  locations,
@@ -350,7 +350,7 @@ func (app *App) HandleComponentCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	insertAuditLog(app.db, "components", id, "insert", nil, comp)
+	insertAuditLog(r, app.db, "components", id, "insert", nil, comp)
 
 	http.Redirect(w, r, "/components/"+id, http.StatusSeeOther)
 }
@@ -393,7 +393,7 @@ func (app *App) HandleComponentEdit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	app.renderer.RenderPage(w, "components/form", componentFormData{
+	app.renderer.RenderPage(w, r, "components/form", componentFormData{
 		Component:  comp,
 		Categories: categories,
 		Locations:  locations,
@@ -479,7 +479,7 @@ func (app *App) HandleComponentUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	insertAuditLog(app.db, "components", id, "update", existing, comp)
+	insertAuditLog(r, app.db, "components", id, "update", existing, comp)
 
 	http.Redirect(w, r, "/components/"+id, http.StatusSeeOther)
 }
@@ -495,7 +495,7 @@ func (app *App) HandleComponentDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	insertAuditLog(app.db, "components", id, "delete", existing, nil)
+	insertAuditLog(r, app.db, "components", id, "delete", existing, nil)
 
 	w.Header().Set("HX-Redirect", "/components")
 	w.WriteHeader(http.StatusOK)
@@ -526,7 +526,7 @@ func (app *App) HandleComponentQuantity(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	insertAuditLog(app.db, "components", id, "quantity",
+	insertAuditLog(r, app.db, "components", id, "quantity",
 		map[string]int{"quantity": oldQty},
 		map[string]int{"quantity": newQty})
 

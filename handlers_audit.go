@@ -37,7 +37,7 @@ func (app *App) HandleAuditLog(w http.ResponseWriter, r *http.Request) {
 		totalPages = 1
 	}
 
-	app.renderer.RenderPage(w, "audit/list", auditLogData{
+	app.renderer.RenderPage(w, r, "audit/list", auditLogData{
 		Entries:    entries,
 		Page:       page,
 		TotalPages: totalPages,
