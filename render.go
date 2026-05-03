@@ -67,6 +67,7 @@ type Renderer struct {
 type PageData struct {
 	CurrentUser *CurrentUser
 	AuthMode    string
+	Build       BuildInfo
 	Data        any
 }
 
@@ -138,6 +139,7 @@ func (r *Renderer) RenderPage(w http.ResponseWriter, req *http.Request, name str
 	page := PageData{
 		CurrentUser: currentUser(req),
 		AuthMode:    authMode,
+		Build:       currentBuildInfo(),
 		Data:        data,
 	}
 	var buf bytes.Buffer

@@ -92,6 +92,8 @@ func publicAuthRoute(r *http.Request) bool {
 	switch {
 	case r.Method == http.MethodGet && r.URL.Path == "/login":
 		return true
+	case (r.Method == http.MethodGet || r.Method == http.MethodHead) && r.URL.Path == "/healthz":
+		return true
 	case r.Method == http.MethodGet && r.URL.Path == "/auth/github/start":
 		return true
 	case r.Method == http.MethodGet && r.URL.Path == "/auth/github/callback":

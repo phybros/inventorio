@@ -63,6 +63,29 @@ Build the Docker container locally with:
 docker build -t inventorio .
 ```
 
+To stamp build metadata into the footer and `/healthz` response, pass build
+args when building the image:
+
+```sh
+docker build -t inventorio \
+  --build-arg VERSION="$(git describe --tags --always --dirty)" \
+  --build-arg COMMIT="$(git rev-parse HEAD)" \
+  --build-arg BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  .
+```
+
+In GitHub Actions, wire those same args from the workflow context:
+
+```yaml
+build-args: |
+  VERSION=${{ github.ref_name }}
+  COMMIT=${{ github.sha }}
+  BUILD_DATE=${{ github.event.repository.updated_at }}
+```
+
+Plain `go build` defaults to `dev` and uses Go's embedded VCS revision when
+available.
+
 ## Configuration
 
 Inventorio listens on `:8080` by default. Set `LISTEN_ADDR` to override it.

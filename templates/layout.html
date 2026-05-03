@@ -373,5 +373,9 @@
     <main class="page-container page-main">
         {{block "content" .Data}}{{end}}
     </main>
+    <footer class="page-container app-footer">
+        <span>Inventorio {{.Build.DisplayVersion}}</span>
+        {{with .Build.DisplayCommit}}<span aria-hidden="true">&middot;</span><span>{{.}}</span>{{end}}
+    </footer>
 </body>
 </html>

@@ -70,6 +70,7 @@ func main() {
 		log.Fatalf("failed to create static sub-FS: %v", err)
 	}
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticSub))))
+	mux.HandleFunc("GET /healthz", app.HandleHealthz)
 
 	// Authentication
 	mux.HandleFunc("GET /login", app.HandleLogin)

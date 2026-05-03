@@ -109,6 +109,14 @@ body {
     padding-block: 2rem;
 }
 
+.app-footer {
+    color: var(--text-subtle);
+    display: flex;
+    gap: 0.375rem;
+    padding-block: 0 1.5rem;
+    font-size: 0.75rem;
+}
+
 .page-header {
     display: flex;
     align-items: center;
