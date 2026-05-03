@@ -14,6 +14,7 @@ const (
 	authModeOAuth    = "oauth"
 	authModeProxy    = "proxy"
 
+	defaultProxyAuthHeader = "X-Forwarded-User"
 	minSessionSecretLength = 32
 )
 
@@ -23,6 +24,7 @@ type AuthConfig struct {
 	SessionSecret     string
 	SessionCookieName string
 	CookieSecure      string
+	ProxyAuthHeader   string
 	AllowAllUsers     bool
 	AllowedEmails     map[string]struct{}
 	AllowedDomains    map[string]struct{}
@@ -42,6 +44,7 @@ func LoadAuthConfigFromEnv() (*AuthConfig, error) {
 		SessionSecret:     strings.TrimSpace(os.Getenv("INVENTORIO_SESSION_SECRET")),
 		SessionCookieName: envOrDefault("INVENTORIO_SESSION_COOKIE_NAME", "inventorio_session"),
 		CookieSecure:      envOrDefault("INVENTORIO_COOKIE_SECURE", "auto"),
+		ProxyAuthHeader:   envOrDefault("INVENTORIO_PROXY_AUTH_HEADER", defaultProxyAuthHeader),
 		AllowAllUsers:     strings.EqualFold(strings.TrimSpace(os.Getenv("INVENTORIO_AUTH_ALLOW_ALL_USERS")), "true"),
 		GitHub: OAuthProviderConfig{
 			ClientID:     os.Getenv("INVENTORIO_GITHUB_CLIENT_ID"),
@@ -102,6 +105,12 @@ func (c *AuthConfig) Validate() error {
 	}
 
 	if c.Mode == authModeProxy {
+		if c.ProxyAuthHeader == "" {
+			return fmt.Errorf("INVENTORIO_PROXY_AUTH_HEADER must not be empty")
+		}
+		if !validHTTPHeaderName(c.ProxyAuthHeader) {
+			return fmt.Errorf("INVENTORIO_PROXY_AUTH_HEADER must be a valid HTTP header name")
+		}
 		return nil
 	}
 
@@ -150,6 +159,13 @@ func (c *AuthConfig) Provider(provider string) OAuthProviderConfig {
 	default:
 		return OAuthProviderConfig{}
 	}
+}
+
+func (c *AuthConfig) ProxyHeaderName() string {
+	if c.ProxyAuthHeader == "" {
+		return defaultProxyAuthHeader
+	}
+	return c.ProxyAuthHeader
 }
 
 func (c *AuthConfig) EmailAllowed(email string) bool {
@@ -202,6 +218,23 @@ func parseAllowedDomains(raw string) (map[string]struct{}, error) {
 		out[entry] = struct{}{}
 	}
 	return out, nil
+}
+
+func validHTTPHeaderName(name string) bool {
+	if name == "" {
+		return false
+	}
+	for _, r := range name {
+		switch {
+		case r >= 'a' && r <= 'z':
+		case r >= 'A' && r <= 'Z':
+		case r >= '0' && r <= '9':
+		case strings.ContainsRune("!#$%&'*+-.^_`|~", r):
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 func normalizeEmail(email string) (string, error) {

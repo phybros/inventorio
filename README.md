@@ -139,17 +139,23 @@ http://localhost:8080/auth/google/callback
 
 ### Reverse Proxy
 
-Proxy mode trusts an upstream proxy to authenticate the user and send
-`X-Forwarded-User`.
+Proxy mode trusts an upstream proxy to authenticate the user and send the
+authenticated user's email in `X-Forwarded-User` by default.
 
 ```sh
 INVENTORIO_AUTH_MODE=proxy
 INVENTORIO_ALLOWED_DOMAINS=example.com
 ```
 
+Set `INVENTORIO_PROXY_AUTH_HEADER` if your proxy uses a different header:
+
+```sh
+INVENTORIO_PROXY_AUTH_HEADER=cf-access-authenticated-user-email
+```
+
 Only use proxy mode when Inventorio is not directly reachable by clients.
-Configure the proxy to strip any incoming client-supplied `X-Forwarded-User`
-header before setting the trusted value.
+Configure the proxy to strip any incoming client-supplied auth header before
+setting the trusted value.
 
 ### Auth Variables
 
@@ -165,6 +171,7 @@ header before setting the trusted value.
 | `INVENTORIO_ALLOWED_EMAILS` | unset | Comma-separated email allowlist. |
 | `INVENTORIO_ALLOWED_DOMAINS` | unset | Comma-separated domain allowlist. |
 | `INVENTORIO_AUTH_ALLOW_ALL_USERS` | `false` | Allows any authenticated OAuth or proxy user. Avoid for internet-facing installs. |
+| `INVENTORIO_PROXY_AUTH_HEADER` | `X-Forwarded-User` | Header trusted in proxy mode as the authenticated user's email. |
 | `INVENTORIO_SESSION_COOKIE_NAME` | `inventorio_session` | Session cookie name. |
 | `INVENTORIO_COOKIE_SECURE` | `auto` | `auto`, `true`, or `false`. |
 

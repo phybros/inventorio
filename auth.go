@@ -131,7 +131,7 @@ func wantsJSON(r *http.Request) bool {
 }
 
 func (app *App) userForProxyRequest(r *http.Request) (*CurrentUser, error) {
-	email, err := normalizeEmail(r.Header.Get("X-Forwarded-User"))
+	email, err := normalizeEmail(r.Header.Get(app.auth.ProxyHeaderName()))
 	if err != nil {
 		return nil, err
 	}

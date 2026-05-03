@@ -94,6 +94,35 @@ func TestDomainAllowlistIsCaseInsensitive(t *testing.T) {
 	if !cfg.EmailAllowed("ALICE@example.com") {
 		t.Fatal("EmailAllowed returned false for allowed domain")
 	}
+	if cfg.ProxyAuthHeader != defaultProxyAuthHeader {
+		t.Fatalf("ProxyAuthHeader = %q, want %q", cfg.ProxyAuthHeader, defaultProxyAuthHeader)
+	}
+}
+
+func TestProxyAuthHeaderCanBeConfigured(t *testing.T) {
+	clearAuthEnv(t)
+	t.Setenv("INVENTORIO_AUTH_MODE", authModeProxy)
+	t.Setenv("INVENTORIO_ALLOWED_DOMAINS", "example.com")
+	t.Setenv("INVENTORIO_PROXY_AUTH_HEADER", "cf-access-authenticated-user-email")
+
+	cfg, err := LoadAuthConfigFromEnv()
+	if err != nil {
+		t.Fatalf("LoadAuthConfigFromEnv() error = %v", err)
+	}
+	if cfg.ProxyAuthHeader != "cf-access-authenticated-user-email" {
+		t.Fatalf("ProxyAuthHeader = %q", cfg.ProxyAuthHeader)
+	}
+}
+
+func TestProxyAuthHeaderRejectsInvalidName(t *testing.T) {
+	clearAuthEnv(t)
+	t.Setenv("INVENTORIO_AUTH_MODE", authModeProxy)
+	t.Setenv("INVENTORIO_ALLOWED_DOMAINS", "example.com")
+	t.Setenv("INVENTORIO_PROXY_AUTH_HEADER", "bad header")
+
+	if _, err := LoadAuthConfigFromEnv(); err == nil {
+		t.Fatal("LoadAuthConfigFromEnv() error = nil, want error")
+	}
 }
 
 func TestOAuthRejectsWeakSessionSecret(t *testing.T) {
@@ -151,6 +180,7 @@ func clearAuthEnv(t *testing.T) {
 		"INVENTORIO_AUTH_ALLOW_ALL_USERS",
 		"INVENTORIO_SESSION_COOKIE_NAME",
 		"INVENTORIO_COOKIE_SECURE",
+		"INVENTORIO_PROXY_AUTH_HEADER",
 	}
 	for _, key := range keys {
 		t.Setenv(key, "")
