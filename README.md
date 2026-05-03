@@ -1,12 +1,36 @@
-# 📦 inventorio
+# Inventorio
 
-Inventorio is an electronic component inventory management app designed for makers and their out-of-control component collections.
+Inventorio is a self-hosted inventory app for electronic components and maker
+parts collections. It runs as a single Go web app backed by PostgreSQL.
 
-## Usage
+## Quick Start
 
-### Docker Compose
+Start PostgreSQL with the included Compose file:
 
-Run with Docker Compose using the included PostgreSQL service:
+```sh
+docker compose up -d
+```
+
+Then run Inventorio locally:
+
+```sh
+go build
+DATABASE_URL='postgres://inv:inv@localhost:5432/inventory?sslmode=disable' ./inventorio
+```
+
+Open `http://localhost:8080`.
+
+To run the published container instead:
+
+```sh
+docker run --rm -p 8080:8080 \
+  -e DATABASE_URL='postgres://inv:inv@host.docker.internal:5432/inventory?sslmode=disable' \
+  ghcr.io/phybros/inventorio:latest
+```
+
+## Docker Compose
+
+Use Inventorio with PostgreSQL in one Compose stack:
 
 Create `docker-compose.yaml`
 
@@ -30,100 +54,43 @@ services:
       - db
 ```
 
-Run the stack
-
-```sh
-docker compose up -d
-```
-
-### Docker
-
-Or run the container directly and pass a database URL:
-
-```sh
-docker run --rm -p 8080:8080 \
-  -e DATABASE_URL='postgres://inv:inv@host.docker.internal:5432/inventory?sslmode=disable' \
-  ghcr.io/phybros/inventorio:latest
-```
-
-### Raw Binary
-
-Or just build and run the binary, no Docker required:
-
-```sh
-go build
-DATABASE_URL='postgres://inv:inv@host.docker.internal:5432/inventory?sslmode=disable' ./inventorio
-```
-
-### Building
-
-Build the Docker container locally with:
-
-```sh
-docker build -t inventorio .
-```
-
-To stamp build metadata into the footer and `/healthz` response, pass build
-args when building the image:
-
-```sh
-docker build -t inventorio \
-  --build-arg VERSION="$(git describe --tags --always --dirty)" \
-  --build-arg COMMIT="$(git rev-parse HEAD)" \
-  --build-arg BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-  .
-```
-
-In GitHub Actions, wire those same args from the workflow context:
-
-```yaml
-build-args: |
-  VERSION=${{ github.ref_name }}
-  COMMIT=${{ github.sha }}
-  BUILD_DATE=${{ github.event.repository.updated_at }}
-```
-
-Plain `go build` defaults to `dev` and uses Go's embedded VCS revision when
-available.
-
 ## Configuration
 
-Inventorio listens on `:8080` by default. Set `LISTEN_ADDR` to override it.
+Inventorio listens on `:8080` by default.
 
-Database configuration can be provided as a full PostgreSQL URL:
+| Variable | Default | Description |
+| --- | --- | --- |
+| `LISTEN_ADDR` | `:8080` | HTTP listen address. |
+| `DATABASE_URL` | unset | Full PostgreSQL connection URL. Takes precedence over individual DB variables. |
+| `DB_HOST` | `localhost` | PostgreSQL host when `DATABASE_URL` is unset. |
+| `DB_PORT` | `5432` | PostgreSQL port. |
+| `DB_NAME` | `inventory` | Database name. |
+| `DB_USER` | `inv` | Database user. |
+| `DB_PASSWORD` | `inv` | Database password. |
+| `DB_SSLMODE` | `disable` | PostgreSQL SSL mode. |
+
+Example:
 
 ```sh
-DATABASE_URL=postgres://inv:inv@localhost:5432/inventory?sslmode=disable
-```
-
-If `DATABASE_URL` is not set, Inventorio builds the connection URL from:
-
-```sh
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=inventory
-DB_USER=inv
-DB_PASSWORD=inv
-DB_SSLMODE=disable
+DATABASE_URL='postgres://inv:inv@localhost:5432/inventory?sslmode=disable'
 ```
 
 ## Authentication
 
-Inventorio defaults to no authentication for compatibility with existing
-self-hosted installs:
+Inventorio defaults to no authentication so existing self-hosted installs keep
+working:
 
 ```sh
 INVENTORIO_AUTH_MODE=disabled
 ```
 
-**Do not expose a disabled-mode deployment directly to the internet. For
-internet-facing deployments, use OAuth or a trusted authenticating reverse proxy.**
+Do not expose a disabled-mode deployment directly to the internet. Use OAuth or
+a trusted authenticating reverse proxy for internet-facing deployments.
 
 ### OAuth
 
-OAuth mode supports GitHub and Google. At least one provider must be configured,
-and authenticated users must be constrained with an allowlist unless you
-explicitly opt into allowing everyone.
+OAuth mode supports GitHub and Google. Configure at least one provider, set a
+public URL, and restrict users with allowed emails or domains.
 
 ```sh
 INVENTORIO_AUTH_MODE=oauth
@@ -140,80 +107,101 @@ INVENTORIO_ALLOWED_EMAILS=alice@example.com,bob@example.com
 INVENTORIO_ALLOWED_DOMAINS=example.org
 ```
 
-Provider entries are optional individually, but each configured provider needs
-both a client ID and client secret. GitHub logins require a primary verified
-email. Google logins require a verified Google email.
+Provider variables are optional individually, but each enabled provider needs
+both a client ID and client secret. GitHub users need a primary verified email;
+Google users need a verified Google email.
 
-`INVENTORIO_SESSION_SECRET` signs OAuth state and must be at least 32
-characters. Generate a production value with:
+Generate a session secret with:
 
 ```sh
 openssl rand -base64 32
 ```
 
-Set provider callback URLs from `INVENTORIO_PUBLIC_URL`:
+Provider callback URLs are derived from `INVENTORIO_PUBLIC_URL`:
 
 ```text
-GitHub authorization callback URL:
 https://inventory.example.com/auth/github/callback
-
-Google authorized redirect URI:
 https://inventory.example.com/auth/google/callback
 ```
 
-For local testing with `INVENTORIO_PUBLIC_URL=http://localhost:8080`, use:
+For local testing with `INVENTORIO_PUBLIC_URL=http://localhost:8080`:
 
 ```text
-GitHub authorization callback URL:
+GitHub callback URL:
 http://localhost:8080/auth/github/callback
 
-Google authorized JavaScript origin:
+Google JavaScript origin:
 http://localhost:8080
 
-Google authorized redirect URI:
+Google redirect URI:
 http://localhost:8080/auth/google/callback
 ```
 
-Google origins include only the scheme, host, and optional port. Redirect URIs
-include the full callback path and must exactly match the URL Inventorio sends
-to Google. GitHub only needs the full callback URL.
-
 ### Reverse Proxy
 
-Proxy mode trusts a reverse proxy to authenticate the user and pass:
-
-```http
-X-Forwarded-User: authenticated-user@example.com
-```
-
-Example:
+Proxy mode trusts an upstream proxy to authenticate the user and send
+`X-Forwarded-User`.
 
 ```sh
 INVENTORIO_AUTH_MODE=proxy
 INVENTORIO_ALLOWED_DOMAINS=example.com
 ```
 
-**Proxy mode is only safe when Inventorio is not directly reachable by clients.
+Only use proxy mode when Inventorio is not directly reachable by clients.
 Configure the proxy to strip any incoming client-supplied `X-Forwarded-User`
-header before setting the trusted value.**
+header before setting the trusted value.
 
-### Auth Options
+### Auth Variables
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `INVENTORIO_AUTH_MODE` | `disabled` | `disabled`, `oauth`, or `proxy`. |
+| `INVENTORIO_PUBLIC_URL` | unset | Required for OAuth. Used to build redirect URLs. |
+| `INVENTORIO_SESSION_SECRET` | unset | Required for OAuth. Must be at least 32 characters. |
+| `INVENTORIO_GITHUB_CLIENT_ID` | unset | GitHub OAuth client ID. |
+| `INVENTORIO_GITHUB_CLIENT_SECRET` | unset | GitHub OAuth client secret. |
+| `INVENTORIO_GOOGLE_CLIENT_ID` | unset | Google OAuth client ID. |
+| `INVENTORIO_GOOGLE_CLIENT_SECRET` | unset | Google OAuth client secret. |
+| `INVENTORIO_ALLOWED_EMAILS` | unset | Comma-separated email allowlist. |
+| `INVENTORIO_ALLOWED_DOMAINS` | unset | Comma-separated domain allowlist. |
+| `INVENTORIO_AUTH_ALLOW_ALL_USERS` | `false` | Allows any authenticated OAuth or proxy user. Avoid for internet-facing installs. |
+| `INVENTORIO_SESSION_COOKIE_NAME` | `inventorio_session` | Session cookie name. |
+| `INVENTORIO_COOKIE_SECURE` | `auto` | `auto`, `true`, or `false`. |
+
+Allowlist matching is case-insensitive. Password login is not included in
+Inventorio 1.0.
+
+## Building
+
+Build the image locally:
 
 ```sh
-INVENTORIO_SESSION_COOKIE_NAME=inventorio_session
-INVENTORIO_COOKIE_SECURE=auto
+docker build -t inventorio .
 ```
 
-`INVENTORIO_COOKIE_SECURE` accepts `auto`, `true`, or `false`. `auto` uses secure
-cookies for HTTPS requests, `X-Forwarded-Proto: https`, or an HTTPS
-`INVENTORIO_PUBLIC_URL`.
+To include build metadata in the footer and `/healthz` response:
 
-Allowlist matching is case-insensitive. `INVENTORIO_AUTH_ALLOW_ALL_USERS=true`
-allows any successfully authenticated OAuth or proxy user and should be avoided
-for internet-facing deployments. Password login is not included in Inventorio
-1.0.
+```sh
+docker build -t inventorio \
+  --build-arg VERSION="$(git describe --tags --always --dirty)" \
+  --build-arg COMMIT="$(git rev-parse HEAD)" \
+  --build-arg BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  .
+```
 
-## AI Usage Disclaimer
+In GitHub Actions, pass the same args from the workflow context:
+
+```yaml
+build-args: |
+  VERSION=${{ github.ref_name }}
+  COMMIT=${{ github.sha }}
+  BUILD_DATE=${{ github.event.repository.updated_at }}
+```
+
+Plain `go build` defaults to version `dev` and uses Go's embedded VCS revision
+when available.
+
+## Notes
 
 AI coding assistance has been used in the creation of this app.
 
