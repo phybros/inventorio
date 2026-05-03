@@ -38,7 +38,7 @@ func TestOAuthRequiresProviderAndAllowlist(t *testing.T) {
 	clearAuthEnv(t)
 	t.Setenv("INVENTORIO_AUTH_MODE", authModeOAuth)
 	t.Setenv("INVENTORIO_PUBLIC_URL", "https://inventory.example.com")
-	t.Setenv("INVENTORIO_SESSION_SECRET", "secret")
+	t.Setenv("INVENTORIO_SESSION_SECRET", strongSessionSecret())
 
 	if _, err := LoadAuthConfigFromEnv(); err == nil {
 		t.Fatal("LoadAuthConfigFromEnv() error = nil, want error")
@@ -55,7 +55,7 @@ func TestOAuthAcceptsCompleteProviderAndAllowlist(t *testing.T) {
 	clearAuthEnv(t)
 	t.Setenv("INVENTORIO_AUTH_MODE", authModeOAuth)
 	t.Setenv("INVENTORIO_PUBLIC_URL", "https://inventory.example.com")
-	t.Setenv("INVENTORIO_SESSION_SECRET", "secret")
+	t.Setenv("INVENTORIO_SESSION_SECRET", strongSessionSecret())
 	t.Setenv("INVENTORIO_GITHUB_CLIENT_ID", "id")
 	t.Setenv("INVENTORIO_GITHUB_CLIENT_SECRET", "secret")
 	t.Setenv("INVENTORIO_ALLOWED_EMAILS", " Alice@Example.com ")
@@ -73,7 +73,7 @@ func TestPartialProviderConfigFails(t *testing.T) {
 	clearAuthEnv(t)
 	t.Setenv("INVENTORIO_AUTH_MODE", authModeOAuth)
 	t.Setenv("INVENTORIO_PUBLIC_URL", "https://inventory.example.com")
-	t.Setenv("INVENTORIO_SESSION_SECRET", "secret")
+	t.Setenv("INVENTORIO_SESSION_SECRET", strongSessionSecret())
 	t.Setenv("INVENTORIO_GITHUB_CLIENT_ID", "id")
 	t.Setenv("INVENTORIO_ALLOWED_DOMAINS", "example.com")
 
@@ -93,6 +93,20 @@ func TestDomainAllowlistIsCaseInsensitive(t *testing.T) {
 	}
 	if !cfg.EmailAllowed("ALICE@example.com") {
 		t.Fatal("EmailAllowed returned false for allowed domain")
+	}
+}
+
+func TestOAuthRejectsWeakSessionSecret(t *testing.T) {
+	clearAuthEnv(t)
+	t.Setenv("INVENTORIO_AUTH_MODE", authModeOAuth)
+	t.Setenv("INVENTORIO_PUBLIC_URL", "https://inventory.example.com")
+	t.Setenv("INVENTORIO_SESSION_SECRET", "short-secret")
+	t.Setenv("INVENTORIO_GITHUB_CLIENT_ID", "id")
+	t.Setenv("INVENTORIO_GITHUB_CLIENT_SECRET", "secret")
+	t.Setenv("INVENTORIO_ALLOWED_EMAILS", "alice@example.com")
+
+	if _, err := LoadAuthConfigFromEnv(); err == nil {
+		t.Fatal("LoadAuthConfigFromEnv() error = nil, want error")
 	}
 }
 
@@ -141,4 +155,8 @@ func clearAuthEnv(t *testing.T) {
 	for _, key := range keys {
 		t.Setenv(key, "")
 	}
+}
+
+func strongSessionSecret() string {
+	return "0123456789abcdef0123456789abcdef"
 }

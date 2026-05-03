@@ -88,7 +88,7 @@ explicitly opt into allowing everyone.
 ```sh
 INVENTORIO_AUTH_MODE=oauth
 INVENTORIO_PUBLIC_URL=https://inventory.example.com
-INVENTORIO_SESSION_SECRET=replace-with-a-long-random-secret
+INVENTORIO_SESSION_SECRET=replace-with-at-least-32-random-characters
 
 INVENTORIO_GITHUB_CLIENT_ID=...
 INVENTORIO_GITHUB_CLIENT_SECRET=...
@@ -103,6 +103,13 @@ INVENTORIO_ALLOWED_DOMAINS=example.org
 Provider entries are optional individually, but each configured provider needs
 both a client ID and client secret. GitHub logins require a primary verified
 email. Google logins require a verified Google email.
+
+`INVENTORIO_SESSION_SECRET` signs OAuth state and must be at least 32
+characters. Generate a production value with:
+
+```sh
+openssl rand -base64 32
+```
 
 Set provider callback URLs from `INVENTORIO_PUBLIC_URL`:
 

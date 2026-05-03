@@ -13,6 +13,8 @@ const (
 	authModeDisabled = "disabled"
 	authModeOAuth    = "oauth"
 	authModeProxy    = "proxy"
+
+	minSessionSecretLength = 32
 )
 
 type AuthConfig struct {
@@ -37,7 +39,7 @@ func LoadAuthConfigFromEnv() (*AuthConfig, error) {
 	cfg := &AuthConfig{
 		Mode:              envOrDefault("INVENTORIO_AUTH_MODE", authModeDisabled),
 		PublicURL:         strings.TrimRight(strings.TrimSpace(os.Getenv("INVENTORIO_PUBLIC_URL")), "/"),
-		SessionSecret:     os.Getenv("INVENTORIO_SESSION_SECRET"),
+		SessionSecret:     strings.TrimSpace(os.Getenv("INVENTORIO_SESSION_SECRET")),
 		SessionCookieName: envOrDefault("INVENTORIO_SESSION_COOKIE_NAME", "inventorio_session"),
 		CookieSecure:      envOrDefault("INVENTORIO_COOKIE_SECURE", "auto"),
 		AllowAllUsers:     strings.EqualFold(strings.TrimSpace(os.Getenv("INVENTORIO_AUTH_ALLOW_ALL_USERS")), "true"),
@@ -111,6 +113,9 @@ func (c *AuthConfig) Validate() error {
 	}
 	if c.SessionSecret == "" {
 		return fmt.Errorf("oauth mode requires INVENTORIO_SESSION_SECRET")
+	}
+	if len(c.SessionSecret) < minSessionSecretLength {
+		return fmt.Errorf("INVENTORIO_SESSION_SECRET must be at least %d characters", minSessionSecretLength)
 	}
 
 	githubPartial := (c.GitHub.ClientID == "") != (c.GitHub.ClientSecret == "")
