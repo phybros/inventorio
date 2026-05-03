@@ -4,7 +4,11 @@ Inventorio is an electronic component inventory management app designed for make
 
 ## Usage
 
+### Docker Compose
+
 Run with Docker Compose using the included PostgreSQL service:
+
+Create `docker-compose.yaml`
 
 ```yaml
 services:
@@ -17,6 +21,7 @@ services:
 
   inventorio:
     image: ghcr.io/phybros/inventorio:latest
+    restart: on-failure
     ports:
       - "8080:8080"
     environment:
@@ -24,6 +29,14 @@ services:
     depends_on:
       - db
 ```
+
+Run the stack
+
+```sh
+docker compose up -d
+```
+
+### Docker
 
 Or run the container directly and pass a database URL:
 
@@ -33,12 +46,16 @@ docker run --rm -p 8080:8080 \
   ghcr.io/phybros/inventorio:latest
 ```
 
+### Raw Binary
+
 Or just build and run the binary, no Docker required:
 
 ```sh
 go build
 DATABASE_URL='postgres://inv:inv@host.docker.internal:5432/inventory?sslmode=disable' ./inventorio
 ```
+
+### Building
 
 Build the Docker container locally with:
 
