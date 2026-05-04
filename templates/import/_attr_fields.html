@@ -1,0 +1,49 @@
+{{if .Fields}}
+<div class="import-attrs-grid">
+    {{range .Fields}}
+    <div class="form-group">
+        <label class="form-label">
+            {{.Attr.DisplayName}}
+            {{if .Attr.Unit}}<span class="form-label-hint">({{deref .Attr.Unit}})</span>{{end}}
+            {{if .Attr.IsRequired}}<span class="form-required">*</span>{{end}}
+        </label>
+        {{if eq .Attr.DataType "numeric"}}
+        <input type="text" inputmode="decimal" name="{{.InputName}}"
+               value="{{if and .Value .Value.ValueNumeric}}{{formatSIInput .Value.ValueNumeric .Attr.Unit}}{{end}}"
+               placeholder="e.g. 4.7k, 100n, 1M"
+               {{if .Attr.IsRequired}}required{{end}}
+               class="input input-sm">
+        {{else if eq .Attr.DataType "text"}}
+        <input type="text" name="{{.InputName}}"
+               value="{{if and .Value .Value.ValueText}}{{deref .Value.ValueText}}{{end}}"
+               {{if .Attr.IsRequired}}required{{end}}
+               class="input input-sm">
+        {{else if eq .Attr.DataType "enum"}}
+        <select name="{{.InputName}}" {{if .Attr.IsRequired}}required{{end}}
+                data-combobox data-allow-create="true"
+                data-create-url="/api/enums/{{deref .Attr.EnumGroupID}}/values/quick-create"
+                data-placeholder="Search or create value..."
+                class="input input-sm">
+            <option value="">- select -</option>
+            {{$selected := ""}}
+            {{if and .Value .Value.ValueEnum}}{{$selected = deref .Value.ValueEnum}}{{end}}
+            {{range .EnumValues}}
+            <option value="{{.ID}}" {{if eq $selected .ID}}selected{{end}}>{{.DisplayName}}</option>
+            {{end}}
+        </select>
+        {{else if eq .Attr.DataType "boolean"}}
+        <div style="padding-top:0.25rem">
+            <label class="check-label">
+                <input type="checkbox" name="{{.InputName}}" value="on"
+                       {{if and .Value .Value.ValueBoolean}}{{if derefBool .Value.ValueBoolean}}checked{{end}}{{end}}
+                       class="checkbox">
+                <span>Yes</span>
+            </label>
+        </div>
+        {{end}}
+    </div>
+    {{end}}
+</div>
+{{else}}
+<p class="text-muted">Select a category to edit attributes.</p>
+{{end}}

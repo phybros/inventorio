@@ -150,6 +150,7 @@ func main() {
 
 	// Import
 	mux.HandleFunc("GET /import", app.HandleImportPage)
+	mux.HandleFunc("GET /import/attr-fields", app.HandleImportAttrFields)
 	mux.HandleFunc("POST /import/preview", app.HandleImportPreview)
 	mux.HandleFunc("POST /import/commit", app.HandleImportCommit)
 
