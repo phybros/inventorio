@@ -22,7 +22,7 @@
                 <option value="">(none — top-level)</option>
                 {{$parentID := .Category.ParentID}}
                 {{range .Parents}}
-                <option value="{{.ID}}" {{if and $parentID (eq (deref $parentID) .ID)}}selected{{end}}>{{.Name}}</option>
+                <option value="{{.ID}}" {{if and $parentID (eq (deref $parentID) .ID)}}selected{{end}}>{{.Path}}</option>
                 {{end}}
             </select>
         </div>

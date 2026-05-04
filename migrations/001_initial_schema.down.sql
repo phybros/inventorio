@@ -1,3 +1,11 @@
+DROP TRIGGER IF EXISTS trg_prevent_category_cycles ON categories;
+DROP FUNCTION IF EXISTS prevent_category_cycles();
+DROP TABLE IF EXISTS sessions;
+DROP TABLE IF EXISTS user_identities;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS project_builds;
+DROP TABLE IF EXISTS project_bom_items;
+DROP TABLE IF EXISTS projects;
 DROP TABLE IF EXISTS audit_log;
 DROP TABLE IF EXISTS storage_locations;
 DROP TABLE IF EXISTS component_attributes;

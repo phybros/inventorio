@@ -27,7 +27,7 @@
                 <li>
                     <a href="/components?category={{.ID}}{{if $.SearchQuery}}&q={{$.SearchQuery}}{{end}}"
                        class="sidebar-link {{if eq $.CategoryID .ID}}is-active{{end}}">
-                        {{if .ParentName}}<span class="text-subtle" style="margin-right:0.25rem;padding-left:0.5rem">└</span>{{end}}<span {{if .HasChildren}}class="font-semibold"{{end}}>{{.Name}}</span>
+                        {{if .ParentName}}<span class="text-subtle" style="margin-right:0.25rem;padding-left:{{.Depth}}rem">└</span>{{end}}<span {{if .HasChildren}}class="font-semibold"{{end}}>{{.Name}}</span>
                     </a>
                 </li>
                 {{end}}

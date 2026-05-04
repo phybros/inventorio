@@ -36,7 +36,7 @@
             <option value="">— none —</option>
             {{range $cats}}
             <option value="{{.ID}}">
-                {{if .ParentName}}{{deref .ParentName}} / {{end}}{{.Name}}
+                {{.Path}}
             </option>
             {{end}}
         </select>
@@ -133,7 +133,7 @@
                                     <option value="">— use default —</option>
                                     {{range $cats}}
                                     <option value="{{.ID}}" {{if eq $row.CategoryID .ID}}selected{{end}}>
-                                        {{if .ParentName}}{{deref .ParentName}} / {{end}}{{.Name}}
+                                        {{.Path}}
                                     </option>
                                     {{end}}
                                 </select>

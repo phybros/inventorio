@@ -23,9 +23,7 @@
                     class="input">
                 <option value="">(none — top-level)</option>
                 {{range .}}
-                    {{if not .ParentID}}
-                    <option value="{{.ID}}">{{.Name}}</option>
-                    {{end}}
+                    <option value="{{.ID}}">{{.Path}}</option>
                 {{end}}
             </select>
         </div>
@@ -51,7 +49,7 @@
             {{range .}}
             <tr id="cat-{{.ID}}" class="table-row-hover">
                 <td>
-                    {{if .ParentID}}<span class="text-subtle" style="margin-right:0.25rem">└</span>{{end}}
+                    {{if .ParentID}}<span class="text-subtle" style="margin-right:0.25rem;padding-left:{{.Depth}}rem">└</span>{{end}}
                     <span {{if not .ParentID}}class="font-medium"{{end}}>{{.Name}}</span>
                 </td>
                 <td class="td-muted">{{if .ParentName}}{{deref .ParentName}}{{else}}—{{end}}</td>

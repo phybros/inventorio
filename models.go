@@ -6,6 +6,8 @@ type Category struct {
 	ID          string
 	Name        string
 	ParentID    *string
+	Path        string
+	Depth       int
 	Description *string
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
@@ -16,6 +18,8 @@ type CategoryListItem struct {
 	Name        string
 	ParentID    *string
 	ParentName  *string
+	Path        string
+	Depth       int
 	Description *string
 	AttrCount   int
 	HasChildren bool

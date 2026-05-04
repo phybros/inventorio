@@ -35,11 +35,23 @@ func normalizeQuery(q string) string {
 
 func listCategories(db *sql.DB) ([]CategoryListItem, error) {
 	rows, err := db.Query(`
-		SELECT c.id, c.name, c.parent_id, p.name, c.description,
-		       (SELECT COUNT(*) FROM attribute_definitions WHERE category_id = c.id)
-		FROM categories c
-		LEFT JOIN categories p ON c.parent_id = p.id
-		ORDER BY COALESCE(c.parent_id, c.id), c.parent_id NULLS FIRST, c.name
+		WITH RECURSIVE category_tree AS (
+			SELECT c.id, c.name, c.parent_id, c.description, c.name AS path, 0 AS depth, ARRAY[c.name] AS sort_path
+			FROM categories c
+			WHERE c.parent_id IS NULL
+
+			UNION ALL
+
+			SELECT c.id, c.name, c.parent_id, c.description, ct.path || ' / ' || c.name, ct.depth + 1, ct.sort_path || c.name
+			FROM categories c
+			JOIN category_tree ct ON c.parent_id = ct.id
+		)
+		SELECT ct.id, ct.name, ct.parent_id, p.name, ct.path, ct.depth, ct.description,
+		       (SELECT COUNT(*) FROM attribute_definitions WHERE category_id = ct.id),
+		       EXISTS (SELECT 1 FROM categories child WHERE child.parent_id = ct.id)
+		FROM category_tree ct
+		LEFT JOIN categories p ON ct.parent_id = p.id
+		ORDER BY ct.sort_path
 	`)
 	if err != nil {
 		return nil, err
@@ -49,7 +61,7 @@ func listCategories(db *sql.DB) ([]CategoryListItem, error) {
 	var items []CategoryListItem
 	for rows.Next() {
 		var item CategoryListItem
-		if err := rows.Scan(&item.ID, &item.Name, &item.ParentID, &item.ParentName, &item.Description, &item.AttrCount); err != nil {
+		if err := rows.Scan(&item.ID, &item.Name, &item.ParentID, &item.ParentName, &item.Path, &item.Depth, &item.Description, &item.AttrCount, &item.HasChildren); err != nil {
 			return nil, err
 		}
 		items = append(items, item)
@@ -60,9 +72,21 @@ func listCategories(db *sql.DB) ([]CategoryListItem, error) {
 func getCategory(db *sql.DB, id string) (*Category, error) {
 	var c Category
 	err := db.QueryRow(`
-		SELECT id, name, parent_id, description, created_at, updated_at
-		FROM categories WHERE id = $1
-	`, id).Scan(&c.ID, &c.Name, &c.ParentID, &c.Description, &c.CreatedAt, &c.UpdatedAt)
+		WITH RECURSIVE category_tree AS (
+			SELECT c.id, c.name, c.parent_id, c.description, c.created_at, c.updated_at, c.name AS path, 0 AS depth
+			FROM categories c
+			WHERE c.parent_id IS NULL
+
+			UNION ALL
+
+			SELECT c.id, c.name, c.parent_id, c.description, c.created_at, c.updated_at, ct.path || ' / ' || c.name, ct.depth + 1
+			FROM categories c
+			JOIN category_tree ct ON c.parent_id = ct.id
+		)
+		SELECT id, name, parent_id, path, depth, description, created_at, updated_at
+		FROM category_tree
+		WHERE id = $1
+	`, id).Scan(&c.ID, &c.Name, &c.ParentID, &c.Path, &c.Depth, &c.Description, &c.CreatedAt, &c.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -110,10 +134,34 @@ func deleteCategory(db *sql.DB, id string) error {
 
 func listParentCandidates(db *sql.DB, excludeID string) ([]Category, error) {
 	rows, err := db.Query(`
-		SELECT id, name, parent_id, description, created_at, updated_at
-		FROM categories
-		WHERE parent_id IS NULL AND id != $1
-		ORDER BY name
+		WITH RECURSIVE excluded AS (
+			SELECT id
+			FROM categories
+			WHERE id = $1
+
+			UNION ALL
+
+			SELECT c.id
+			FROM categories c
+			JOIN excluded e ON c.parent_id = e.id
+		),
+		category_tree AS (
+			SELECT c.id, c.name, c.parent_id, c.description, c.created_at, c.updated_at,
+			       c.name AS path, 0 AS depth, ARRAY[c.name] AS sort_path
+			FROM categories c
+			WHERE c.parent_id IS NULL
+
+			UNION ALL
+
+			SELECT c.id, c.name, c.parent_id, c.description, c.created_at, c.updated_at,
+			       ct.path || ' / ' || c.name, ct.depth + 1, ct.sort_path || c.name
+			FROM categories c
+			JOIN category_tree ct ON c.parent_id = ct.id
+		)
+		SELECT id, name, parent_id, path, depth, description, created_at, updated_at
+		FROM category_tree
+		WHERE NOT EXISTS (SELECT 1 FROM excluded WHERE excluded.id = category_tree.id)
+		ORDER BY sort_path
 	`, excludeID)
 	if err != nil {
 		return nil, err
@@ -123,7 +171,7 @@ func listParentCandidates(db *sql.DB, excludeID string) ([]Category, error) {
 	var cats []Category
 	for rows.Next() {
 		var c Category
-		if err := rows.Scan(&c.ID, &c.Name, &c.ParentID, &c.Description, &c.CreatedAt, &c.UpdatedAt); err != nil {
+		if err := rows.Scan(&c.ID, &c.Name, &c.ParentID, &c.Path, &c.Depth, &c.Description, &c.CreatedAt, &c.UpdatedAt); err != nil {
 			return nil, err
 		}
 		cats = append(cats, c)
@@ -316,7 +364,16 @@ func listComponents(db *sql.DB, categoryID string, q string, filters []AttrFilte
 	var conditions []string
 
 	if categoryID != "" {
-		conditions = append(conditions, fmt.Sprintf("(c.category_id = $%d OR c.category_id IN (SELECT id FROM categories WHERE parent_id = $%d))", argN, argN))
+		conditions = append(conditions, fmt.Sprintf(`c.category_id IN (
+			WITH RECURSIVE category_descendants AS (
+				SELECT id FROM categories WHERE id = $%d
+				UNION ALL
+				SELECT child.id
+				FROM categories child
+				JOIN category_descendants cd ON child.parent_id = cd.id
+			)
+			SELECT id FROM category_descendants
+		)`, argN))
 		args = append(args, categoryID)
 		argN++
 	}
@@ -590,41 +647,64 @@ func saveComponentAttributes(db sqlExecer, componentID string, attrs []Component
 
 // getMergedAttributes returns attribute definitions for a category, including inherited parent attrs.
 func getMergedAttributes(db *sql.DB, categoryID string) ([]AttributeDefinition, error) {
-	cat, err := getCategory(db, categoryID)
+	rows, err := db.Query(`
+		WITH RECURSIVE ancestors AS (
+			SELECT id, parent_id, 0 AS distance
+			FROM categories
+			WHERE id = $1
+
+			UNION ALL
+
+			SELECT p.id, p.parent_id, a.distance + 1
+			FROM categories p
+			JOIN ancestors a ON a.parent_id = p.id
+		)
+		SELECT ad.id, ad.category_id, ad.name, ad.display_name, ad.data_type,
+		       ad.unit, ad.enum_group_id, eg.name, ad.is_required, ad.sort_order,
+		       ad.created_at, ad.updated_at
+		FROM ancestors a
+		JOIN attribute_definitions ad ON ad.category_id = a.id
+		LEFT JOIN enum_groups eg ON ad.enum_group_id = eg.id
+		ORDER BY a.distance DESC, ad.sort_order, ad.name
+	`, categoryID)
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
-	var allAttrs []AttributeDefinition
-
-	// If this category has a parent, get parent attrs first
-	if cat.ParentID != nil {
-		parentAttrs, err := listAttributesByCategory(db, *cat.ParentID)
-		if err != nil {
+	var attrs []AttributeDefinition
+	for rows.Next() {
+		var a AttributeDefinition
+		if err := rows.Scan(&a.ID, &a.CategoryID, &a.Name, &a.DisplayName, &a.DataType,
+			&a.Unit, &a.EnumGroupID, &a.EnumGroupName, &a.IsRequired, &a.SortOrder,
+			&a.CreatedAt, &a.UpdatedAt); err != nil {
 			return nil, err
 		}
-		allAttrs = append(allAttrs, parentAttrs...)
+		attrs = append(attrs, a)
 	}
-
-	// Then get this category's own attrs
-	ownAttrs, err := listAttributesByCategory(db, categoryID)
-	if err != nil {
-		return nil, err
-	}
-	allAttrs = append(allAttrs, ownAttrs...)
-
-	return allAttrs, nil
+	return attrs, rows.Err()
 }
 
 // listAllCategories returns all categories for the sidebar, including parents and leaves.
 func listAllCategories(db *sql.DB) ([]CategoryListItem, error) {
 	rows, err := db.Query(`
-		SELECT c.id, c.name, c.parent_id, p.name, c.description,
-		       (SELECT COUNT(*) FROM attribute_definitions WHERE category_id = c.id),
-		       EXISTS (SELECT 1 FROM categories child WHERE child.parent_id = c.id)
-		FROM categories c
-		LEFT JOIN categories p ON c.parent_id = p.id
-		ORDER BY COALESCE(p.name, c.name), c.parent_id IS NOT NULL, c.name
+		WITH RECURSIVE category_tree AS (
+			SELECT c.id, c.name, c.parent_id, c.description, c.name AS path, 0 AS depth, ARRAY[c.name] AS sort_path
+			FROM categories c
+			WHERE c.parent_id IS NULL
+
+			UNION ALL
+
+			SELECT c.id, c.name, c.parent_id, c.description, ct.path || ' / ' || c.name, ct.depth + 1, ct.sort_path || c.name
+			FROM categories c
+			JOIN category_tree ct ON c.parent_id = ct.id
+		)
+		SELECT ct.id, ct.name, ct.parent_id, p.name, ct.path, ct.depth, ct.description,
+		       (SELECT COUNT(*) FROM attribute_definitions WHERE category_id = ct.id),
+		       EXISTS (SELECT 1 FROM categories child WHERE child.parent_id = ct.id)
+		FROM category_tree ct
+		LEFT JOIN categories p ON ct.parent_id = p.id
+		ORDER BY ct.sort_path
 	`)
 	if err != nil {
 		return nil, err
@@ -634,7 +714,7 @@ func listAllCategories(db *sql.DB) ([]CategoryListItem, error) {
 	var items []CategoryListItem
 	for rows.Next() {
 		var item CategoryListItem
-		if err := rows.Scan(&item.ID, &item.Name, &item.ParentID, &item.ParentName, &item.Description, &item.AttrCount, &item.HasChildren); err != nil {
+		if err := rows.Scan(&item.ID, &item.Name, &item.ParentID, &item.ParentName, &item.Path, &item.Depth, &item.Description, &item.AttrCount, &item.HasChildren); err != nil {
 			return nil, err
 		}
 		items = append(items, item)

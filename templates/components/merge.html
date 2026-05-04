@@ -159,7 +159,7 @@
                         <select id="field-category-id" name="category_id" class="input input-sm">
                             {{range .Categories}}
                             <option value="{{.ID}}" {{if eq $.CompA.CategoryID .ID}}selected{{end}}>
-                                {{if .ParentName}}{{deref .ParentName}} &rarr; {{end}}{{.Name}}
+                                {{.Path}}
                             </option>
                             {{end}}
                         </select>
