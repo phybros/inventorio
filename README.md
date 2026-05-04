@@ -3,6 +3,24 @@
 Inventorio is a self-hosted inventory app for electronic components and maker
 parts collections. It runs as a single Go web app backed by PostgreSQL.
 
+## Features
+
+- Component inventory with categories, storage locations, manufacturer part
+  numbers, datasheets, notes, quantities, and low-stock tracking.
+- Category-specific attributes with numeric, text, boolean, and enum fields,
+  including inherited attributes from parent categories.
+- Search and filtering across components and category-specific attributes.
+- DigiKey cart CSV and Mouser order XLS importers with preview, editable fields,
+  category suggestions, attribute entry, and quantity merging for matching MPNs.
+- Duplicate component detection and interactive merge previews for consolidating
+  records that share the same MPN.
+- Project and BOM tracking with buildability checks, shortage reporting, project
+  duplication, and build execution that subtracts used parts from inventory.
+- Hierarchical storage locations with printable location labels.
+- Audit history for inventory, import, merge, project, and build actions.
+- Optional authentication through GitHub or Google OAuth, or a trusted reverse
+  proxy.
+
 ## Quick Start
 
 Start PostgreSQL with the included Compose file:
